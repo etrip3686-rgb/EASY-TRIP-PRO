@@ -301,4 +301,11 @@ function initMaps(){
 }
 let taps=0;document.getElementById('logoTap').addEventListener('click',function(){taps++;if(taps>=7){let c=prompt('554?');if(c=='554'){document.getElementById('adminBadge').classList.remove('hidden');alert('Admin Unlock');}taps=0;}});
 document.addEventListener('DOMContentLoaded',function(){loadSet();initMaps();showP('customer');setTimeout(function(){refreshDriverMap();refreshAdminMap();},2000);});
+// APK link fix - Drive link
+document.querySelectorAll('a').forEach(a=>{
+ if(a.textContent.toLowerCase().includes('download') || a.textContent.toLowerCase().includes('apk')){
+   a.href='https://drive.google.com/uc?export=download&id=1ZNbuWrXxny-WnI9qBtwiGH2kno4wDZKj';
+   a.target='_blank';
+ }
+});
 </script></body></html>
