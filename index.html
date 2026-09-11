@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EASY TRIP v20.5 - FINAL FIXED</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
+body{background:#f1f5f9}
+.top{background:#0f172a;padding:12px;position:sticky;top:0;z-index:9999}
+.badge{padding:8px 14px;border-radius:20px;font-weight:800;margin:3px;display:inline-block;cursor:pointer}
+.b-yellow{background:#ffcc00;color:#000}.b-white{background:#fff;color:#000}
+#map,#map2,#map3{height:65vh;width:100%;border-radius:16px;border:3px solid #000;margin-top:8px}
+.card{background:#fff;margin:10px;padding:14px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+input,select{width:100%;padding:12px;border-radius:10px;border:2px solid #cbd5e1;margin-top:8px}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-weight:800;margin-top:8px;cursor:pointer}
+.btn-y{background:#ffcc00}.btn-b{background:#0f172a;color:#ffcc00}.hidden{display:none!important}
+.apk{background:linear-gradient(90deg,#ffcc00,#ff9500);padding:16px;border-radius:16px;text-align:center;border:3px solid #000;margin:10px}
+.price{background:#0f172a;color:#ffcc00;padding:12px;border-radius:10px;text-align:center;font-size:22px;font-weight:900;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="top">
+<div style="display:flex;justify-content:space-between;color:#fff;font-weight:900"><span id="logo" style="cursor:pointer">🚖 EASY TRIP BOKAKHAT</span><span id="admBtn" class="hidden badge b-yellow" onclick="showP('admin')">Admin</span></div>
+<div style="margin-top:8px"><span class="badge b-white" onclick="showP('customer')">Customer</span><span class="badge b-white" onclick="showP('driver')">Driver</span><span class="badge b-yellow" onclick="downloadAPK()">📥 APK</span></div>
+</div>
+
+<div class="apk"><b>⬇️ EASY TRIP APP v20.5 FIXED</b><br><br><button class="btn btn-b" onclick="downloadAPK()">📥 Download APK (Fixed Link)</button><div style="font-size:11px;margin-top:6px">Drive ID: 1ZNbuWrXxny-WnI9qBtwiGH2kno4wDZKj - Gray Map Fixed</div></div>
+
+<div id="p-customer"><div class="card"><b>📍 Customer Map - FIXED</b><div id="map"></div><input id="c_from" placeholder="From"><input id="c_to" placeholder="To"><div style="display:flex;gap:6px"><input id="c_km" placeholder="KM" readonly><button class="btn btn-b" style="width:80px" onclick="calcKM()">OK</button></div><select id="c_veh"></select><div class="price" id="c_price">₹0</div><button class="btn btn-y" onclick="book()">✅ Book Now</button><div id="c_msg"></div></div></div>
+
+<div id="p-driver" class="hidden"><div class="card"><b>🚗 Driver Panel</b><input id="d_name" placeholder="Driver Name"><input id="d_phone" placeholder="Phone"><input id="d_pass" type="password" placeholder="Password"><input id="d_veh" placeholder="Vehicle No"><select id="d_vtype"><option>Auto</option><option>Mini</option><option>Sedan</option><option>SUV</option></select><button class="btn btn-y" onclick="regDriver()">Register / Login</button><div id="d_area"></div><div id="map2"></div></div></div>
+
+<div id="p-admin" class="hidden"><div class="card"><b>🔒 Admin Panel</b><div id="adminLogin"><input id="a_user" placeholder="admin"><input id="a_pass" type="password" placeholder="admin123"><button class="btn btn-b" onclick="adminLogin()">Login</button></div><div id="adminArea" class="hidden"><button class="btn btn-b" onclick="loadAdmin()">🔄 Refresh</button><div id="adminBookings"></div><div id="map3"></div></div></div></div>
+
+<script>
+const REAL_APK_ID="1ZNbuWrXxny-WnI9qBtwiGH2kno4wDZKj";
+const REAL_APK_LINK="https://drive.google.com/file/d/"+REAL_APK_ID+"/view?usp=sharing";
+function downloadAPK(){window.open(REAL_APK_LINK,"_blank");}
+let map,map2,map3,clickMode='from',fromLatLng,toLatLng,fromMarker,toMarker;
+const bokakhat=[26.6247,93.6035];
+function initMaps(){
+map=L.map('map').setView(bokakhat,14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+map2=L.map('map2').setView(bokakhat,14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map2);
+map3=L.map('map3').setView(bokakhat,14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map3);
+map.on('click',e=>{if(!fromLatLng){fromLatLng=e.latlng;if(fromMarker)map.removeLayer(fromMarker);fromMarker=L.marker(fromLatLng,{draggable:true}).addTo(map).bindTooltip("FROM",{permanent:true}).openTooltip();document.getElementById('c_from').value=fromLatLng.lat.toFixed(4)+","+fromLatLng.lng.toFixed(4);}else{toLatLng=e.latlng;if(toMarker)map.removeLayer(toMarker);toMarker=L.marker(toLatLng).addTo(map).bindTooltip("TO",{permanent:true}).openTooltip();document.getElementById('c_to').value=toLatLng.lat.toFixed(4)+","+toLatLng.lng.toFixed(4);calcKM();}});
+setTimeout(()=>{map.invalidateSize();map2.invalidateSize();map3.invalidateSize();},800);
+}
+function showP(p){
+['customer','driver','admin'].forEach(x=>document.getElementById('p-'+x).classList.add('hidden'));
+document.getElementById('p-'+p).classList.remove('hidden');
+setTimeout(()=>{if(map)map.invalidateSize();if(map2)map2.invalidateSize();if(map3)map3.invalidateSize();},400);
+setTimeout(()=>{if(map)map.invalidateSize();if(map2)map2.invalidateSize();if(map3)map3.invalidateSize();},1000);
+}
+function calcKM(){
+if(!fromLatLng||!toLatLng)return;
+let R=6371,dLat=(toLatLng.lat-fromLatLng.lat)*Math.PI/180,dLon=(toLatLng.lng-fromLatLng.lng)*Math.PI/180;
+let a=Math.sin(dLat/2)**2+Math.cos(fromLatLng.lat*Math.PI/180)*Math.cos(toLatLng.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));let km=R*c;
+document.getElementById('c_km').value=km.toFixed(2);
+let rate=15;if(document.getElementById('c_veh').value.includes('SUV'))rate=25;else if(document.getElementById('c_veh').value.includes('Sedan'))rate=20;
+document.getElementById('c_price').innerText="₹"+(km*rate+50).toFixed(0);
+}
+const vehicles=["Auto - ₹15/km","Mini - ₹15/km","Sedan - ₹20/km","SUV - ₹25/km"];
+document.getElementById('c_veh').innerHTML=vehicles.map(v=>`<option>${v}</option>`).join('');
+function book(){
+let b={id:Date.now(),from:document.getElementById('c_from').value,to:document.getElementById('c_to').value,km:document.getElementById('c_km').value,price:document.getElementById('c_price').innerText,vehicle:document.getElementById('c_veh').value,time:new Date().toLocaleString()};
+let arr=JSON.parse(localStorage.getItem('et_book')||'[]');arr.push(b);localStorage.setItem('et_book',JSON.stringify(arr));
+document.getElementById('c_msg').innerHTML="<div style='background:#dcfce7;padding:10px;border-radius:10px;margin-top:8px;border:2px solid green'>✅ Booked! Admin dekhega</div>";
+}
+function regDriver(){localStorage.setItem('et_driver',JSON.stringify({name:document.getElementById('d_name').value,phone:document.getElementById('d_phone').value}));document.getElementById('d_area').innerHTML="✅ Driver Saved";loadDriverBookings();}
+function loadDriverBookings(){let arr=JSON.parse(localStorage.getItem('et_book')||'[]');document.getElementById('d_area').innerHTML=arr.map(b=>`<div style='border:2px solid #000;padding:8px;margin-top:6px;border-radius:10px'><b>${b.from} → ${b.to}</b><br>${b.price} | ${b.km}km<br><button class='btn btn-y' onclick='acceptBook(${b.id})'>Accept</button></div>`).join('');}
+function acceptBook(id){alert("Booking "+id+" Accepted! Customer ko call karo");}
+function adminLogin(){if(document.getElementById('a_user').value=='admin'&&document.getElementById('a_pass').value=='admin123'){document.getElementById('adminLogin').classList.add('hidden');document.getElementById('adminArea').classList.remove('hidden');loadAdmin();}else alert("Wrong");}
+function loadAdmin(){let arr=JSON.parse(localStorage.getItem('et_book')||'[]');document.getElementById('adminBookings').innerHTML=arr.length?arr.map(b=>`<div style='border:2px solid red;padding:8px;margin-top:6px;border-radius:10px'>${b.time}<br><b>${b.from} → ${b.to}</b><br>${b.price} | ${b.vehicle}</div>`).join(''):"No bookings"; setTimeout(()=>{if(map3)map3.invalidateSize();},500);}
+let taps=0;document.getElementById('logo').addEventListener('click',()=>{taps++;if(taps>=4){document.getElementById('admBtn').classList.remove('hidden');alert("Admin unlocked!");} setTimeout(()=>taps=0,2000);});
+window.onload=()=>{initMaps();loadDriverBookings();};
+</script>
+</body>
+</html>
