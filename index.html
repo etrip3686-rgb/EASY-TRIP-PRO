@@ -315,5 +315,22 @@ document.addEventListener('click', function(e){
   }
 }, true);
 </script>
-</body>
+<script>
+// Purane code ko thik karne wala chhota fix - bina delete kiye
+setTimeout(()=>{
+  try{
+    if(window.map) window.map.invalidateSize();
+    if(window.driverMap) window.driverMap.invalidateSize();
+    if(window.adminMap) window.adminMap.invalidateSize();
+  }catch(e){}
+}, 1000);
+
+const FINAL_APK = "https://drive.google.com/file/d/1ZNbuWrXxny-WnI9qBtwiGH2kno4wDZKj/view?usp=sharing";
+document.querySelectorAll('a,button').forEach(b=>{
+  if(b.innerText.toLowerCase().includes('apk')){
+    b.href = FINAL_APK;
+    b.target = "_blank";
+  }
+});
+</script></body>
 </html>
