@@ -301,6 +301,24 @@ function initMaps(){
 }
 let taps=0;document.getElementById('logoTap').addEventListener('click',function(){taps++;if(taps>=7){let c=prompt('554?');if(c=='554'){document.getElementById('adminBadge').classList.remove('hidden');alert('Admin Unlock');}taps=0;}});
 document.addEventListener('DOMContentLoaded',function(){loadSet();initMaps();showP('customer');setTimeout(function(){refreshDriverMap();refreshAdminMap();},2000);});
+
+// MAP FIX - Golaghat center
+function initMaps(){
+ try{
+  let normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'});
+  let satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+  let labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{maxZoom:19});
+  let hybrid = L.layerGroup([satellite, labels]);
+  if(typeof map !== 'undefined' && map){
+   try{ map.eachLayer(l=>{if(l instanceof L.TileLayer) map.removeLayer(l)}); }catch(e){}
+   normal.addTo(map);
+   setTimeout(()=>{ try{map.invalidateSize();}catch(e){} },600);
+  }
+  if(typeof map2 !== 'undefined' && map2){ try{ normal.addTo(map2); }catch(e){} }
+  if(typeof map3 !== 'undefined' && map3){ try{ normal.addTo(map3); }catch(e){} }
+ }catch(e){ console.log('map fix',e) }
+}
+
 // APK link fix - Drive link
 document.querySelectorAll('a').forEach(a=>{
  if(a.textContent.toLowerCase().includes('download') || a.textContent.toLowerCase().includes('apk')){
