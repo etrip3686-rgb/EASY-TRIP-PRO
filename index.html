@@ -291,45 +291,29 @@ function initMaps(){
   for(let i=0;i<markers3.length;i++){try{map3.removeLayer(markers3[i]);}catch(e){}}markers3=[];
   let s=S();let locs=s.locations||def.locations;
   for(let i=0;i<locs.length;i++){
-    let loc=locs[i];let safeName=loc.n.replace(/"/g,'').replace(/'/g,'');let label=loc.icon+' '+safeName;
-    let m=L.marker([loc.lat,loc.lng]).addTo(map);m.bindTooltip(label,{permanent:true,direction:'top',className:'myTooltip',offset:[0,-12]});m.bindPopup('<div style=text-align:center><b>'+label+'</b><br><button onclick="setFromLocation(\''+safeName+'\')" style="background:#ffcc00;border:3px solid #000;padding:10px 18px;border-radius:20px;font-weight:900;margin:4px">📍 From</button><br><button onclick="setToLocation(\''+safeName+'\')" style="background:#0f172a;color:#ffcc00;border:3px solid #ffcc00;padding:10px 18px;border-radius:20px;font-weight:900;margin:4px">🏁 To</button></div>');m.on('click',function(){setFromLocation(safeName);});markers.push(m);
-    let m2=L.marker([loc.lat,loc.lng]).addTo(map2);m2.bindTooltip(label,{permanent:true,direction:'top',className:'myTooltip'});m2.on('click',function(){setFromLocation(safeName);});markers2.push(m2);
-    let m3=L.marker([loc.lat,loc.lng]).addTo(map3);m3.bindTooltip(label,{permanent:true,direction:'top',className:'myTooltip'});m3.on('click',function(){setFromLocation(safeName);});markers3.push(m3);
-  }
-  if(locs.length>0){try{map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.4));}catch(e){}try{map2.fitBounds(new L.featureGroup(markers2).getBounds().pad(0.4));}catch(e){}try{map3.fitBounds(new L.featureGroup(markers3).getBounds().pad(0.4));}catch(e){}}
-  map.off('click');map.on('click',function(e){let nearest=null;let minDist=Infinity;for(let i=0;i<locs.length;i++){let d=Math.sqrt(Math.pow(e.latlng.lat-locs[i].lat,2)+Math.pow(e.latlng.lng-locs[i].lng,2));if(d<minDist){minDist=d;nearest=locs[i];}}if(nearest){setFromLocation(nearest.n);}});
-}
-let taps=0;document.getElementById('logoTap').addEventListener('click',function(){taps++;if(taps>=7){let c=prompt('554?');if(c=='554'){document.getElementById('adminBadge').classList.remove('hidden');alert('Admin Unlock');}taps=0;}});
-document.addEventListener('DOMContentLoaded',function(){loadSet();initMaps();showP('customer');setTimeout(function(){refreshDriverMap();refreshAdminMap();},2000);});
-// FINAL FIX - Map + New APK - 100% Working
+   <script>
+// FINAL MAP + APK FIX
 setTimeout(function(){
   try{
-    if(window.map){ try{window.map.remove();}catch(e){} window.map=null; }
-    window.map = L.map('map').setView([26.6245, 93.6012], 12);
+    if(window.map) window.map.remove();
+    window.map = L.map('map').setView([26.6245, 93.6012], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(window.map);
-    setTimeout(()=>window.map.invalidateSize(), 800);
+    window.map.on('click', function(e){
+      if(typeof setPickup === 'function') setPickup(e.latlng.lat, e.latlng.lng);
+    });
+    window.map.invalidateSize();
+    setTimeout(()=>window.map.invalidateSize(), 1000);
   }catch(e){}
-}, 1200);
+}, 800);
 
-// NAYA APK LINK FORCE
-const NEW_APK = "https://drive.google.com/uc?export=download&id=1ZNbuWrXxny-WnI9qBtwiGH2kno4wDZKj";
+const APK_LINK = "https://drive.google.com/file/d/1ZNbuWrXxny-WnI9qBtwiGH2kno4wDZKj/view?usp=sharing";
 document.addEventListener('click', function(e){
-  let btn = e.target.closest('a, button');
-  if(!btn) return;
-  let txt = (btn.innerText || "").toLowerCase();
-  if(txt.includes('download') || txt.includes('apk')){
+  let b = e.target.closest('a, button');
+  if(b && b.innerText.toLowerCase().includes('apk')){
     e.preventDefault();
-    e.stopImmediatePropagation();
-    window.open(NEW_APK, '_blank');
+    window.open(APK_LINK,'_blank');
   }
 }, true);
-
-// Saare purane link bhi badal do
-setInterval(function(){
-  document.querySelectorAll('a').forEach(a=>{
-    if(a.href.includes('.apk') || a.href.includes('download')){
-      a.href = NEW_APK;
-    }
-  });
-}, 1000);
-</script></body></html>
+</script>
+</body>
+</html>
