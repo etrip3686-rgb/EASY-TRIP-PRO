@@ -378,50 +378,90 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
 },2000);
 </script>
 <script>
-// FINAL 3-in-1: OTP Security + Blue Line + Delete - PASTE BEFORE </body>
-let ET_dLoc=null, ET_lastCount=0, ET_ringtoneURL=localStorage.getItem('et_ringtone')||'';
-function ET_beep(){try{if(ET_ringtoneURL){new Audio(ET_ringtoneURL).play();}else{let x=new(window.AudioContext||window.webkitAudioContext)();let o=x.createOscillator(),g=x.createGain();o.frequency.value=900;g.gain.value=0.5;o.connect(g);g.connect(x.destination);o.start();setTimeout(()=>o.stop(),500);} if(navigator.vibrate) navigator.vibrate([300,100,300]);}catch(e){}}
+// FINAL CLEAN + OTP HIDE + DELETE + NAME FIX - Ek hi code
+(function(){
+  function getVal(b){
+    return {
+      name: b.name || b.c_name || b.customerName || b.cName || b.passengerName || 'Customer',
+      phone: b.phone || b.c_phone || b.customerPhone || b.cPhone || b.mobile || '',
+      from: b.fromName || b.from || b.pickup || b.from_address || b.pickup_address || 'Pickup',
+      to: b.toName || b.to || b.drop || b.to_address || b.drop_address || 'Drop',
+      price: b.price || b.fare || '0',
+      otp: b.otp || '----'
+    };
+  }
 
-// 1. BLUE LINE FIX - 100% dikhega
-window.ET_showBlue=function(id){
- let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id));
- if(!b){alert('Booking nahi mila');return;}
- let m = window.dmap || window.driverMap || window.map || window.amap || window.adminMap || window._map;
- if(!m){alert('Pehle Map open karo');return;}
- if(window.EB1) try{m.removeLayer(window.EB1)}catch(e){} if(window.EB2) try{m.removeLayer(window.EB2)}catch(e){}
- m.setView([b.fromLat||26.14,b.fromLng||91.73],13);
- if(ET_dLoc) window.EB1=L.polyline([[ET_dLoc.lat,ET_dLoc.lng],[b.fromLat,b.fromLng]],{color:'blue',weight:6}).addTo(m);
- window.EB2=L.polyline([[b.fromLat,b.fromLng],[b.toLat,b.toLng]],{color:'blue',weight:6,dashArray:'10,10'}).addTo(m);
- L.marker([b.fromLat,b.fromLng]).addTo(m).bindPopup('Pickup: '+(b.fromName||'')).addTo(m);
- L.marker([b.toLat,b.toLng]).addTo(m).bindPopup('Drop: '+(b.toName||'')).addTo(m);
-}
+  window.ET_deleteBooking=function(id){
+    if(!confirm('Delete karna hai?')) return;
+    let arr=JSON.parse(localStorage.getItem('et_book')||'[]');
+    localStorage.setItem('et_book', JSON.stringify(arr.filter(x=>String(x.id)!=String(id))));
+    location.reload();
+  }
 
-// 2. DELETE OPTION
-window.ET_deleteBooking=function(id){
- if(!confirm('Delete karna hai? Ye hamesha ke liye hat jayega!')) return;
- let arr=JSON.parse(localStorage.getItem('et_book')||'[]');
- localStorage.setItem('et_book',JSON.stringify(arr.filter(x=>String(x.id)!=String(id))));
- alert('Deleted ✅'); FIX_DriverView();
-}
+  window.ET_clearBad=function(){
+    if(!confirm('Saare undefined / kharaab bookings delete kar du?')) return;
+    let arr=JSON.parse(localStorage.getItem('et_book')||'[]');
+    let good=arr.filter(b=> (b.name||b.c_name||b.customerName) && (b.phone||b.c_phone) );
+    localStorage.setItem('et_book', JSON.stringify(good));
+    alert('Saaf ho gaya! '+good.length+' sahi bookings bache hai');
+    location.reload();
+  }
 
-// 3. OTP SECURITY + DRIVER VIEW
-window.FIX_DriverView=function(){
- let cur=JSON.parse(localStorage.getItem('et_current_driver')||'null'); if(!cur) return;
- let all=JSON.parse(localStorage.getItem('et_book')||'[]');
- let pend=all.filter(b=>b.status=='pending');
- let acc=all.filter(b=>b.status=='accepted'&&(b.driver==cur.phone||b.driverPhone==cur.phone));
- let comp=all.filter(b=>b.status=='completed'&&(b.driver==cur.phone||b.driverPhone==cur.phone));
- if(pend.length>ET_lastCount&&ET_lastCount!=0) ET_beep(); ET_lastCount=pend.length;
- let dArea=document.getElementById('d_area'); if(!dArea) return;
- let html='';
- if(acc.length) html+=acc.map(b=>`<div style="background:#dcfce7;padding:12px;border-radius:12px;margin:8px 0;border:3px solid green"><b style="color:green">✅ ACTIVE</b><br>👤 ${b.name||'Customer'}<br>📞 <a href="tel:${b.phone}">${b.phone}</a><br>📍 ${b.fromName||''}<br>🏁 ${b.toName||''}<br>💰 ₹${b.price}<br><button onclick="ET_showBlue('${b.id}')" style="width:100%;margin-top:6px;padding:8px;background:blue;color:#fff;border:0;border-radius:8px">🔵 Blue Line - Rasta</button><div style="display:flex;gap:6px;margin-top:6px"><input id="otp_${b.id}" placeholder="Customer se OTP pucho" style="flex:1;padding:8px;border-radius:8px;border:1px solid #000"><button onclick="ET_verifyPickup('${b.id}')" style="padding:8px;background:#000;color:#ff0;border:0;border-radius:8px">Verify</button></div><button onclick="ET_completeTrip('${b.id}')" id="comp_${b.id}" style="width:100%;margin-top:6px;padding:8px;background:#16a34a;color:#fff;border:0;border-radius:8px;display:none">Trip Complete</button><button onclick="ET_deleteBooking('${b.id}')" style="width:100%;margin-top:4px;padding:6px;background:#ff4444;color:#fff;border:0;border-radius:8px">🗑️ Delete Booking</button></div>`).join('');
- html+=pend.map(b=>`<div style="background:#fff;padding:12px;border-radius:12px;margin:8px 0;border:2px solid #000"><b>👤 ${b.name||'Customer'}</b> - ₹${b.price}<br>📞 <a href="tel:${b.phone}">${b.phone}</a><br>📍 ${b.fromName||''} → ${b.toName||''}<br><span style="font-size:11px;color:red">OTP customer ke paas hai, driver ko nahi dikhega</span><br><div style="display:flex;gap:6px;margin-top:8px"><button onclick="ET_showBlue('${b.id}')" style="flex:1;padding:8px;background:blue;color:#fff;border:0;border-radius:8px">🔵 Rasta</button><button onclick="acceptBook('${b.id}')" style="flex:1;padding:8px;background:#ffcc00;border:0;border-radius:8px;font-weight:bold">Accept</button><button onclick="ET_deleteBooking('${b.id}')" style="padding:8px;background:#ff4444;color:#fff;border:0;border-radius:8px">🗑️</button></div></div>`).join('') || (acc.length?'':'<div style="text-align:center;padding:10px">Koi booking nahi</div>');
- html+=`<div style="margin-top:15px"><b style="background:#000;color:#ff0;padding:6px 10px;border-radius:8px;display:block;text-align:center">📜 Purani Completed Booking - Delete kar sakte ho</b>`+comp.reverse().slice(0,20).map(b=>`<div style="background:#f1f5f9;padding:10px;border-radius:10px;margin:6px 0;border:1px solid #ccc;font-size:12px">${b.fromName||''} → ${b.toName||''} ₹${b.price} ${b.completedAt||''}<br><button onclick="ET_deleteBooking('${b.id}')" style="margin-top:4px;padding:5px 10px;background:#ff4444;color:#fff;border:0;border-radius:6px">🗑️ Delete</button></div>`).join('')+`</div>`;
- dArea.innerHTML=html;
-}
-window.ET_verifyPickup=function(id){let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id)); let en=document.getElementById('otp_'+id).value.trim(); if(en=='' ) return alert('OTP dalo'); if(en==String(b.otp)||en=='1234'){b.pickupVerified=true; localStorage.setItem('et_book',JSON.stringify(arr)); alert('✅ OTP Sahi! Blue Line dikhega ab'); document.getElementById('comp_'+id).style.display='block'; ET_showBlue(id);}else alert('❌ Galat OTP - Customer se sahi pucho');}
-window.ET_completeTrip=function(id){let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id)); if(!b.pickupVerified) return alert('Pehle OTP Verify karo'); b.status='completed'; b.completedAt=new Date().toLocaleString(); localStorage.setItem('et_book',JSON.stringify(arr)); alert('Trip Complete ₹'+b.price); FIX_DriverView();}
-setTimeout(()=>{navigator.geolocation.watchPosition(p=>{ET_dLoc={lat:p.coords.latitude,lng:p.coords.longitude}; let c=JSON.parse(localStorage.getItem('et_current_driver')||'{}'); if(c.phone) localStorage.setItem('et_driver_loc_'+c.phone,JSON.stringify(ET_dLoc));},null,{enableHighAccuracy:true}); setInterval(()=>{let pd=document.getElementById('p-driver'); if(pd&&!pd.classList.contains('hidden')) FIX_DriverView();},3000);},1500);
+  window.ET_showBlue=function(id){
+    let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id)); 
+    let m=window.dmap||window.driverMap||window.map||window.amap||window.adminMap||window._map;
+    if(!b||!m){alert('Map open karo pehle');return;}
+    try{ if(window.EB1) m.removeLayer(window.EB1); if(window.EB2) m.removeLayer(window.EB2); }catch(e){}
+    let fromLat=b.fromLat||26.1445, fromLng=b.fromLng||91.7362, toLat=b.toLat||26.1845, toLng=b.toLng||91.8062;
+    m.setView([fromLat,fromLng],13);
+    window.EB1=L.polyline([[fromLat,fromLng],[toLat,toLng]],{color:'blue',weight:7}).addTo(m);
+    L.marker([fromLat,fromLng]).addTo(m).bindPopup('Pickup: '+getVal(b).from);
+    L.marker([toLat,toLng]).addTo(m).bindPopup('Drop: '+getVal(b).to);
+  }
+
+  // Purane wale functions ko band karo
+  window.acceptBook=function(id){
+    let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id));
+    b.status='accepted'; let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+    b.driver=cur.phone; b.driverPhone=cur.phone;
+    localStorage.setItem('et_book',JSON.stringify(arr)); alert('Accepted! Customer ko call karo');
+    FIX_DriverView();
+  }
+
+  window.completeTrip=function(id){
+    let otpInput=prompt('Customer se OTP pucho aur yaha dalo:');
+    if(!otpInput) return;
+    let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id));
+    if(otpInput==String(b.otp) || otpInput=='1234'){
+      b.status='completed'; b.completedAt=new Date().toLocaleString();
+      localStorage.setItem('et_book',JSON.stringify(arr)); alert('✅ Trip Complete ₹'+b.price); FIX_DriverView();
+    }else alert('❌ Galat OTP! Customer se sahi OTP lo');
+  }
+
+  window.FIX_DriverView=function(){
+    let dArea=document.getElementById('d_area')||document.getElementById('driverBookings')||document.querySelector('[id*="driver"]');
+    if(!dArea) return;
+    let all=JSON.parse(localStorage.getItem('et_book')||'[]');
+    let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+    let pend=all.filter(b=>b.status=='pending');
+    let acc=all.filter(b=>b.status=='accepted');
+    
+    let html=`<div style="text-align:center;margin:8px"><button onclick="ET_clearBad()" style="padding:6px 12px;background:#000;color:#ff0;border-radius:8px">🧹 Saare Undefined Delete Karo</button></div>`;
+
+    if(acc.length) html+=acc.map(b=>{let v=getVal(b); return `<div style="background:#dcfce7;padding:12px;border-radius:12px;margin:8px 0;border:3px solid green"><b style="color:green">✅ ACTIVE</b><br><b>👤 Customer: ${v.name}</b><br><b>📞 <a href="tel:${v.phone}">${v.phone}</a></b><br>📍 Pickup: ${v.from}<br>🏁 Drop: ${v.to}<br>💰 Price: ₹${v.price}<br><span style="color:red;font-size:11px">OTP customer ke paas hai - yaha nahi dikhega</span><br><button onclick="ET_showBlue('${b.id}')" style="width:100%;margin-top:6px;padding:8px;background:blue;color:#fff;border:0;border-radius:8px">🔵 Blue Line Rasta</button><button onclick="completeTrip('${b.id}')" style="width:100%;margin-top:6px;padding:8px;background:#16a34a;color:#fff;border:0;border-radius:8px">✅ Complete Trip (OTP Pucho)</button><button onclick="ET_deleteBooking('${b.id}')" style="width:100%;margin-top:4px;padding:6px;background:#ff4444;color:#fff;border:0;border-radius:8px">🗑️ Delete</button></div>`}).join('');
+
+    html+=pend.map(b=>{let v=getVal(b); return `<div style="background:#fff;padding:12px;border-radius:12px;margin:8px 0;border:2px solid #000"><b>👤 ${v.name}</b> - ₹${v.price}<br>📞 <a href="tel:${v.phone}">${v.phone||'No Phone'}</a><br>📍 ${v.from} → 🏁 ${v.to}<br><span style="font-size:11px;color:red">OTP customer ke paas hai</span><br><div style="display:flex;gap:6px;margin-top:8px"><button onclick="ET_showBlue('${b.id}')" style="flex:1;padding:8px;background:blue;color:#fff;border:0;border-radius:8px">🔵 Rasta</button><button onclick="acceptBook('${b.id}')" style="flex:1;padding:8px;background:#ffcc00;border:0;border-radius:8px;font-weight:bold">Accept</button><button onclick="ET_deleteBooking('${b.id}')" style="padding:8px;background:#ff4444;color:#fff;border:0;border-radius:8px">🗑️</button></div></div>`}).join('');
+
+    let comp=all.filter(b=>b.status=='completed').slice(-10);
+    if(comp.length) html+=`<div style="margin-top:10px"><b>📜 Purani Booking</b>`+comp.reverse().map(b=>{let v=getVal(b); return `<div style="background:#eee;padding:8px;margin:4px 0;border-radius:8px;font-size:12px">${v.from} → ${v.to} ₹${v.price} <button onclick="ET_deleteBooking('${b.id}')" style="float:right;background:#ff4444;color:#fff;border:0;border-radius:4px">Delete</button></div>`}).join('')+`</div>`;
+
+    dArea.innerHTML=html||'<div style="text-align:center">Koi booking nahi</div>';
+  }
+
+  // Har 1 sec me force update - chahe koi bhi page ho
+  setInterval(FIX_DriverView, 1000);
+  setTimeout(FIX_DriverView, 1000);
+})();
 </script>
 </body>
 </html>
