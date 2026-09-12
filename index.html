@@ -377,5 +377,90 @@ navigator.geolocation.watchPosition(p=>{ET_dLoc={lat:p.coords.latitude,lng:p.coo
 setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filter(b=>b.status=='pending');if(all.length>ET_lastCount&&ET_lastCount!=0)ET_beep();ET_lastCount=all.length;},4000);
 },2000);
 </script>
+<script>
+// FIX: Driver ko Customer Name + Phone + Pickup + Drop + Blue Line dikhega
+function FIX_showCustomerOnDriver(){
+  let all = JSON.parse(localStorage.getItem('et_book')||'[]');
+  // customer booking save thik karo
+  let origBook = window.bookNow || window.createBooking;
+  // Driver card ko override
+  window.loadDriverBookings = window.ET_loadDriver || window.loadDriverBookings;
+  
+  let cur = JSON.parse(localStorage.getItem('et_current_driver')||'null');
+  if(!cur) return;
+  
+  let pend = all.filter(b=>b.status=='pending');
+  let acc = all.filter(b=>b.status=='accepted' && (b.driver==cur.phone || b.driverPhone==cur.phone));
+  
+  let dArea = document.getElementById('d_area');
+  if(!dArea) return;
+  
+  let html = '';
+  if(acc.length){
+    html += acc.map(b=>`
+      <div style="background:#dcfce7;padding:12px;border-radius:12px;margin:8px 0;border:3px solid green">
+        <b style="color:green">✅ ACTIVE TRIP</b><br>
+        <b>👤 Customer: ${b.name||b.c_name||'N/A'}</b><br>
+        <b>📞 Phone: <a href="tel:${b.phone||b.c_phone}">${b.phone||b.c_phone||'N/A'}</a></b><br>
+        <b>📍 Pickup: ${b.fromName||b.from||'Location'}</b><br>
+        <b>🏁 Drop: ${b.toName||b.to||'Location'}</b><br>
+        💰 Price: ₹${b.price} | OTP: <b>${b.otp}</b><br>
+        <button onclick="ET_showBlue('${b.id}')" style="width:100%;margin-top:6px;padding:8px;background:blue;color:#fff;border:0;border-radius:8px">🔵 Blue Line - Rasta Dekho</button>
+        <button onclick="ET_completeTrip('${b.id}')" style="width:100%;margin-top:6px;padding:8px;background:#16a34a;color:#fff;border:0;border-radius:8px">Complete (OTP)</button>
+      </div>
+    `).join('');
+  }
+  
+  html += pend.map(b=>`
+    <div style="background:#fff;padding:12px;border-radius:12px;margin:8px 0;border:2px solid #000">
+      <b>👤 Customer: ${b.name||b.c_name||'N/A'}</b> <span style="background:#ffcc00;padding:2px 6px;border-radius:6px">${b.price? '₹'+b.price : ''}</span><br>
+      <b>📞 Phone: <a href="tel:${b.phone||b.c_phone}">${b.phone||b.c_phone||'N/A'}</a></b><br>
+      <b>📍 Pickup: ${b.fromName||b.from||'Pickup'}</b><br>
+      <b>🏁 Drop: ${b.toName||b.to||'Drop'}</b><br>
+      OTP: ${b.otp} | ${b.time||''}<br>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="ET_showBlue('${b.id}')" style="flex:1;padding:8px;background:blue;color:#fff;border:0;border-radius:8px">🔵 Rasta</button>
+        <button onclick="acceptBook('${b.id}')" style="flex:1;padding:8px;background:#ffcc00;border:0;border-radius:8px;font-weight:bold">Accept</button>
+      </div>
+    </div>
+  `).join('') || (acc.length ? '' : '<div style="text-align:center;padding:15px">Koi booking nahi</div>');
+  
+  dArea.innerHTML = html;
+}
+
+setTimeout(()=>{
+  // har 3 sec me driver card refresh
+  setInterval(()=>{
+    let p = document.getElementById('p-driver');
+    if(p && !p.classList.contains('hidden')) FIX_showCustomerOnDriver();
+  },3000);
+  FIX_showCustomerOnDriver();
+},1500);
+
+// Booking save thik karna - Customer naam/phone pakka save ho
+let oldBookNow = window.bookNow;
+window.bookNow = function(){
+  let name = document.getElementById('c_name')?.value || document.getElementById('cName')?.value || 'Customer';
+  let phone = document.getElementById('c_phone')?.value || document.getElementById('cPhone')?.value || '';
+  let fromN = document.getElementById('c_from')?.value || 'Pickup';
+  let toN = document.getElementById('c_to')?.value || 'Drop';
+  let price = document.getElementById('c_price')?.value || '100';
+  let b = {
+    id: Date.now().toString(),
+    name: name, phone: phone, c_name: name, c_phone: phone,
+    fromName: fromN, toName: toN, from: fromN, to: toN,
+    price: price, otp: Math.floor(1000+Math.random()*9000),
+    status: 'pending', time: new Date().toLocaleString(),
+    fromLat: parseFloat(document.getElementById('c_from')?.dataset?.lat || 26.14),
+    fromLng: parseFloat(document.getElementById('c_from')?.dataset?.lng || 91.73),
+    toLat: parseFloat(document.getElementById('c_to')?.dataset?.lat || 26.18),
+    toLng: parseFloat(document.getElementById('c_to')?.dataset?.lng || 91.8)
+  };
+  let arr = JSON.parse(localStorage.getItem('et_book')||'[]'); arr.push(b);
+  localStorage.setItem('et_book',JSON.stringify(arr));
+  alert('Booked! OTP: '+b.otp + '\nCustomer: '+name);
+  location.reload();
+}
+</script>
 </body>
 </html>
