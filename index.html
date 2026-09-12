@@ -180,6 +180,17 @@ let fromName="",toName="";
 let currentBookingId=null, currentDriverPhone=null;
 const bokakhat=[26.6247,93.6035];
 function getTileLayer(){return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19, attribution:'© Esri'});}
+let routeLine=null;
+function showRoute(fLat,fLng,tLat,tLng){
+ if(routeLine){try{map.removeLayer(routeLine);}catch(e){}}
+ fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`)
+.then(r=>r.json()).then(d=>{
+   if(d.routes && d.routes[0]){
+     routeLine=L.geoJSON(d.routes[0].geometry,{style:{color:'#007bff',weight:6}}).addTo(map);
+     map.fitBounds(routeLine.getBounds(),{padding:[50,50]});
+   }
+ });
+}
 function initMaps(){
 map=L.map('map').setView(bokakhat,13);getTileLayer().addTo(map);
 map2=L.map('map2').setView(bokakhat,13);getTileLayer().addTo(map2);
