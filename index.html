@@ -179,7 +179,7 @@ let map,map2,map3,c_live_map,fromLatLng,toLatLng,fromMarker,toMarker,driverMarke
 let fromName="",toName="";
 let currentBookingId=null, currentDriverPhone=null;
 const bokakhat=[26.6247,93.6035];
-function getTileLayer(){return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19, subdomains:'abcd'});}
+function getTileLayer(){return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19, attribution:'© Esri'});}
 function initMaps(){
 map=L.map('map').setView(bokakhat,13);getTileLayer().addTo(map);
 map2=L.map('map2').setView(bokakhat,13);getTileLayer().addTo(map2);
