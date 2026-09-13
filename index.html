@@ -10,6 +10,13 @@
 .goog-te-banner-frame, .goog-te-balloon-frame, #goog-gt-tt, .goog-text-highlight { display:none !important; }
 body { top:0px !important; }
 </style>
+ <style>
+  /* BLINK FIX - EASY TRIP */
+  .leaflet-tile { animation: none !important; }
+  .leaflet-layer { animation: none !important; }
+  .leaflet-fade-anim .leaflet-tile { opacity: 1 !important; }
+  #map, #map2, #map3, #c_live_map { will-change: auto !important; }
+</style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
