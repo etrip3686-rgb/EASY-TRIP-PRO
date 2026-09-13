@@ -463,5 +463,74 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
   setTimeout(FIX_DriverView, 1000);
 })();
 </script>
+<!-- FIREBASE AUTO UPDATE - KAL WALA TAREEKA - BODY KE THIK UPAR PASTE -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAl3Y4UJ9XdI3xBXNF6PuIAypz3PjYv1ng",
+    authDomain: "easy-trip-d601a.firebaseapp.com",
+    databaseURL: "https://easy-trip-d601a-default-rtdb.firebaseio.com",
+    projectId: "easy-trip-d601a",
+    storageBucket: "easy-trip-d601a.appspot.com",
+    messagingSenderId: "123456789000",
+    appId: "1:123456789000:web:abcdef123456"
+  };
+  try{ firebase.initializeApp(firebaseConfig); window.fbDb = firebase.database(); }catch(e){}
+</script>
+
+<script>
+(function(){
+  const FB_PATH = "config/et_cfg_v33_2";
+  let isApplyingRemote=false;
+  function getLocalCfg(){
+    try{
+      const keys=["et_cfg_v33_2","et_cfg","easy_trip_cfg","ET_CFG"];
+      for(let k of keys){ let v=localStorage.getItem(k); if(v) return {key:k,data:JSON.parse(v)}; }
+      for(let i=0;i<localStorage.length;i++){ let k=localStorage.key(i); if(k&&k.toLowerCase().includes("cfg")){ try{ return {key:k,data:JSON.parse(localStorage.getItem(k))}; }catch(e){} } }
+    }catch(e){} return null;
+  }
+  const origSaveCFG=window.saveCFG;
+  window.saveCFG=function(){ 
+    if(typeof origSaveCFG==='function'){ origSaveCFG.apply(this,arguments); } 
+    try{ 
+      let local=getLocalCfg(); let cfg=null; 
+      if(local&&local.data) cfg=local.data; else if(window.CFG) cfg=window.CFG; else if(window.cfg) cfg=window.cfg; 
+      if(cfg&&window.fbDb&&!isApplyingRemote){ window.fbDb.ref(FB_PATH).set(cfg); console.log("Firebase pe save ho gaya"); } 
+    }catch(e){} 
+  };
+  if(window.fbDb){
+    window.fbDb.ref(FB_PATH).once('value').then(snap=>{
+      let r=snap.val(); 
+      if(r){ 
+        isApplyingRemote=true; 
+        try{ 
+          let l=getLocalCfg(); 
+          let key=(l&&l.key)?l.key:"et_cfg_v33_2"; 
+          localStorage.setItem(key,JSON.stringify(r)); 
+          if(window.CFG) window.CFG=r; 
+          if(window.cfg) window.cfg=r; 
+          setTimeout(()=>location.reload(),800);
+        }catch(e){} 
+        isApplyingRemote=false; 
+      } 
+    });
+    window.fbDb.ref(FB_PATH).on('value',snap=>{
+      let r=snap.val(); if(!r) return; 
+      let l=getLocalCfg(); let ls=l?JSON.stringify(l.data):""; let rs=JSON.stringify(r);
+      if(ls!==rs){ 
+        isApplyingRemote=true; 
+        try{ 
+          let key=(l&&l.key)?l.key:"et_cfg_v33_2"; 
+          localStorage.setItem(key,rs); 
+          location.reload(); 
+        }catch(e){} 
+        isApplyingRemote=false; 
+      } 
+    });
+  }
+})();
+</script>
+<!-- FIREBASE CODE KHATAM -->
 </body>
 </html>
