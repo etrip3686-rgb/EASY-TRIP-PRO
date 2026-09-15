@@ -207,31 +207,15 @@ function showRoute(fLat,fLng,tLat,tLng){
 }
 function initMaps(){
 function initMaps(){
- const bokakhat = [26.6245, 93.6034];
- const golaghat = [26.5230, 93.9690];
- const jorhat = [26.7509, 94.2037];
- const dergaon = [26.6992, 93.9620];
- const numaligarh = [26.6131, 93.7410];
-
- map= L.map('map').setView(bokakhat,9);getTileLayer().addTo(map);
- map2= L.map('map2').setView(bokakhat,9);getTileLayer().addTo(map2);
- map3= L.map('map3').setView(bokakhat,9);getTileLayer().addTo(map3);
-
- let allPlaces = L.latLngBounds([bokakhat, golaghat, jorhat, dergaon, numaligarh]);
- map.fitBounds(allPlaces,{padding:[50,50]});
-
- map.on('click',e=>{
+map= L.map('map').setView(bokakhat,9);getTileLayer().addTo(map);
+map2= L.map('map2').setView(bokakhat,9);getTileLayer().addTo(map2);
+map3= L.map('map3').setView(bokakhat,9);getTileLayer().addTo(map3);
+map.on('click',e=>{
  if(!mapClickMode)return;
  if(!fromLatLng){fromLatLng=e.latLng;fromName="Map Location "+e.latLng.lat.toFixed(3)+","+e.latLng.lng.toFixed(3);if(fromMarker)map.removeLayer(fromMarker);fromMarker=L.marker(e.latLng).addTo(map);}
  else{toLatLng=e.latLng;toName="Map Location "+e.latLng.lat.toFixed(3)+","+e.latLng.lng.toFixed(3);if(toMarker)map.removeLayer(toMarker);toMarker=L.marker(toLatLng).addTo(map);}
  });
- setTimeout(()=>{map.invalidateSize();map2.invalidateSize();map3.invalidateSize();},800);
-
- L.marker(bokakhat).addTo(map).bindPopup("Bokakhat - Head Office");
- L.marker(golaghat).addTo(map).bindPopup("Golaghat");
- L.marker(jorhat).addTo(map).bindPopup("Jorhat");
- L.marker(dergaon).addTo(map).bindPopup("Dergaon");
- L.marker(numaligarh).addTo(map).bindPopup("Numaligarh");
+setTimeout(()=>{map.invalidateSize();map2.invalidateSize();map3.invalidateSize();},800);
 let taps=0,adminUnlocked=false;
 document.getElementById('logoText').addEventListener('click',()=>{taps++;if(taps>=5){adminUnlocked=true;document.getElementById('admBtn').classList.remove('hidden');document.body.classList.add('admin-mode');alert("🔓 Admin Unlocked!");}setTimeout(()=>taps=0,2500);});
 function previewPhoto(input,imgId,hiddenId){if(input.files&&input.files[0]){let r=new FileReader();r.onload=e=>{document.getElementById(imgId).src=e.target.result;document.getElementById(imgId).classList.remove('hidden');document.getElementById(hiddenId).value=e.target.result;};r.readAsDataURL(input.files[0]);}}
