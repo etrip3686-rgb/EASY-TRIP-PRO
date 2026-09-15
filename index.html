@@ -210,7 +210,6 @@ function initMaps(){
  map2= L.map('map2').setView(bokakhat,9);getTileLayer().addTo(map2);
  map3= L.map('map3').setView(bokakhat,9);getTileLayer().addTo(map3);
  map.on('click',e=>{
- if(!mapClickMode)return;
  if(!fromLatLng){fromLatLng=e.latLng;fromName="Map Location "+e.latLng.lat.toFixed(3)+","+e.latLng.lng.toFixed(3);if(fromMarker)map.removeLayer(fromMarker);fromMarker=L.marker(e.latLng).addTo(map);}
  else{toLatLng=e.latLng;toName="Map Location "+e.latLng.lat.toFixed(3)+","+e.latLng.lng.toFixed(3);if(toMarker)map.removeLayer(toMarker);toMarker=L.marker(toLatLng).addTo(map);}
  });
