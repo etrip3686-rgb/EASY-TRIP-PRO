@@ -194,15 +194,35 @@ let fromName="",toName="";
 let currentBookingId=null, currentDriverPhone=null;
 const bokakhat=[26.6247,93.6035];
 function getTileLayer(){return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19, attribution:'© Esri'});}
-let routeLine=null;
+let routeLine=null,routeLine2=null,routeLine3=null;
 function showRoute(fLat,fLng,tLat,tLng){
  if(routeLine){try{map.removeLayer(routeLine);}catch(e){}}
+ if(routeLine2){try{map2.removeLayer(routeLine2);}catch(e){}}
+ if(!fLat||!fLng||!tLat||!tLng) return;
  fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`)
 .then(r=>r.json()).then(d=>{
-   if(d.routes && d.routes[0]){
-     routeLine=L.geoJSON(d.routes[0].geometry,{style:{color:'#007bff',weight:6}}).addTo(map);
-     map.fitBounds(routeLine.getBounds(),{padding:[50,50]});
-   }
+  if(d.routes && d.routes[0]){
+   routeLine=L.geoJSON(d.routes[0].geometry,{style:{color:'#007bff',weight:6}}).addTo(map);
+   routeLine2=L.geoJSON(d.routes[0].geometry,{style:{color:'#007bff',weight:6}}).addTo(map2);
+   try{map.fitBounds(routeLine.getBounds(),{padding:[50,50]});}catch(e){}
+   try{map2.fitBounds(routeLine2.getBounds(),{padding:[50,50]});}catch(e){}
+  } else {
+   routeLine=L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#007bff',weight:6,dashArray:'10,10'}).addTo(map);
+   routeLine2=L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#007bff',weight:6,dashArray:'10,10'}).addTo(map2);
+  }
+ }).catch(e=>{
+   routeLine=L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#007bff',weight:6,dashArray:'10,10'}).addTo(map);
+   routeLine2=L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#007bff',weight:6,dashArray:'10,10'}).addTo(map2);
+ });
+}
+function showRouteDriver(fLat,fLng,tLat,tLng){
+ if(routeLine2){try{map2.removeLayer(routeLine2);}catch(e){}}
+ fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`)
+.then(r=>r.json()).then(d=>{
+  if(d.routes && d.routes[0]){
+   routeLine2=L.geoJSON(d.routes[0].geometry,{style:{color:'#007bff',weight:6}}).addTo(map2);
+   try{map2.fitBounds(routeLine2.getBounds(),{padding:[30,30]});}catch(e){}
+  }
  });
 }
 function initMaps(){
