@@ -473,7 +473,7 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
   }
 
   // Har 1 sec me force update - chahe koi bhi page ho
-  setInterval(FIX_DriverView, 1000);
+  setInterval(FIX_DriverView, 5000);
   setTimeout(FIX_DriverView, 1000);
 })();
 </script>
@@ -524,7 +524,7 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
           localStorage.setItem(key,JSON.stringify(r)); 
           if(window.CFG) window.CFG=r; 
           if(window.cfg) window.cfg=r; 
-          setTimeout(()=>location.reload(),800);
+          setTimeout(()=>{refreshVeh();applyDesign();},800);
         }catch(e){} 
         isApplyingRemote=false; 
       } 
@@ -537,7 +537,7 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
         try{ 
           let key=(l&&l.key)?l.key:"et_cfg_v33_2"; 
           localStorage.setItem(key,rs); 
-          location.reload(); 
+          refreshVeh(); 
         }catch(e){} 
         isApplyingRemote=false; 
       } 
