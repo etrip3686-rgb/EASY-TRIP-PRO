@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EASY TRIP v33.5 - FINAL FULL FIXED 800 LINE</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
+body{background:#f1f5f9}.top{background:#0f172a;padding:14px;color:#fff;position:sticky;top:0;z-index:9999}
+.badge{padding:10px 18px;border-radius:24px;font-weight:800;margin:4px;display:inline-block;cursor:pointer}
+.b-y{background:#ffcc00;color:#000}.b-w{background:#fff;color:#000}
+.card{background:#fff;margin:12px;padding:18px;border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+input,select{width:100%;padding:12px;border-radius:12px;border:2px solid #e2e8f0;margin-top:8px}
+.btn{width:100%;padding:14px;border:none;border-radius:14px;font-weight:800;margin-top:10px;cursor:pointer}
+.btn-y{background:#ffcc00;color:#000}.btn-b{background:#0f172a;color:#ffcc00}.btn-r{background:#ef4444;color:#fff}
+.hidden{display:none!important}#map,#map2,#map3,#c_live_map{height:52vh;width:100%;border-radius:16px;border:3px solid #000;margin-top:10px}
+.suggestBox{position:absolute;z-index:9999;background:#fff;border:2px solid #000;border-radius:12px;max-height:200px;overflow:auto;width:92%}
+</style>
+</head>
+<body>
+<div class="top"><div style="display:flex;justify-content:space-between;font-weight:800"><span id="logoText">🚖 EASY TRIP v33.5</span><span id="admBtn" class="hidden badge b-y" onclick="showP('admin')">⚙️ ADMIN</span></div>
+<div style="margin-top:8px"><span class="badge b-w" onclick="showP('customer')">👤 Customer</span><span class="badge b-w" onclick="showP('driver')">🚗 Driver</span><span class="badge b-y">FIXED</span></div></div>
+
+<div id="p-customer"><div class="card"><h2>📍 Book Ride - Bokakhat/Golaghat</h2><div id="map"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+<button class="btn" style="background:#22c55e;color:#fff" onclick="useCurrentLocation()">📍 My Current Location</button>
+<button class="btn btn-b" onclick="useMapClickMode()">🗺️ Map se Select</button></div>
+<div style="position:relative;margin-top:8px"><input id="c_from" placeholder="From - Bokakhat Town..." oninput="searchLocation(this.value,'from')"><div id="suggestFrom" class="suggestBox hidden"></div></div>
+<div style="position:relative"><input id="c_to" placeholder="To - Golaghat..." oninput="searchLocation(this.value,'to')"><div id="suggestTo" class="suggestBox hidden"></div></div>
+<div style="display:flex;gap:8px"><input id="c_km" placeholder="KM auto" readonly><button class="btn btn-b" style="width:80px" onclick="calcKM()">OK</button></div>
+<select id="c_veh"></select><div id="c_price" style="background:#0f172a;color:#ffcc00;padding:14px;border-radius:14px;text-align:center;font-size:22px;font-weight:900;margin-top:10px">₹0</div>
+<input id="c_phone" placeholder="Customer Phone *"><input id="c_name" placeholder="Customer Name *">
+<button class="btn btn-y" onclick="book()">✅ Book + OTP Generate (Firebase)</button><div id="c_msg"></div>
+<div id="c_live_section" class="hidden"><div class="card" style="background:#0f172a;color:#fff;border:3px solid #ffcc00"><h3 id="live_status">Driver Dhundh Rahe...</h3><div id="c_driver_card"></div><div id="c_live_map"></div><div id="c_live_info" style="background:#fff;color:#000;padding:10px;border-radius:10px;margin-top:10px"></div></div></div>
+<div id="c_otp_show" class="hidden" style="background:#dcfce7;padding:12px;border-radius:12px;margin-top:10px;border:2px solid #22c55e"></div>
+</div></div>
+
+<div id="p-driver" class="hidden"><div class="card"><h2>🚗 Driver Portal</h2>
+<div id="d_auth"><div style="background:#fffbeb;padding:14px;border-radius:14px;border:3px solid #ffcc00"><h3>📝 Register</h3><input id="d_name" placeholder="Name *"><input id="d_phone" placeholder="Phone *"><input id="d_pass" type="password" placeholder="Password *"><input id="d_vehno" placeholder="AS 05 AB 1234"><select id="d_vtype"></select><select id="d_loc"></select><button class="btn btn-y" onclick="regDriver()">✅ Register</button></div>
+<div style="background:#eff6ff;padding:14px;border-radius:14px;margin-top:12px;border:2px solid #000"><b>🔑 Driver Login</b><div style="display:flex;gap:6px;margin-top:6px"><input id="d_login_phone" placeholder="Phone"><input id="d_login_pass" type="password" placeholder="Pass"></div><button class="btn btn-b" onclick="loginDriver()">Login</button></div><div id="d_msg"></div></div>
+<div id="d_dash" class="hidden"><div id="d_status"></div><div id="map2"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-b" onclick="trackMe()">📍 LIVE ON - Customer Dekhega</button><button class="btn btn-y" onclick="loadDriverBookings()">🔄 Refresh Bookings</button></div><div id="d_area"></div><button class="btn btn-r" onclick="logoutDriver()">Logout</button></div></div></div>
+
+<div id="p-admin" class="hidden"><div class="card"><b>🔒 Admin (Logo 5 click)</b><div id="adminLogin"><input id="a_user" placeholder="admin"><input id="a_pass" type="password" placeholder="admin123"><button class="btn btn-b" onclick="adminLogin()">Login</button></div><div id="adminArea" class="hidden"><div id="map3"></div><div id="adminBookings"></div><div id="adminDrivers"></div></div></div></div>
+
+<div id="custLoginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:1000000;align-items:center;justify-content:center;">
+<div style="background:#fff;padding:18px;border-radius:16px;width:92%;max-width:380px;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3>Customer Login</h3><button onclick="document.getElementById('custLoginModal').style.display='none'" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 10px">✖️</button></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+<button onclick="document.getElementById('custLoginModal').style.display='none';localStorage.setItem('et_current_page','driver');showP('driver')" style="background:#0f172a;color:#ffcc00;padding:10px;border:none;border-radius:10px;font-weight:800">🚗 Driver Login</button>
+<button onclick="document.getElementById('custLoginModal').style.display='none'" style="background:#fff;border:2px solid #000;padding:10px;border-radius:10px;font-weight:800">👤 Skip</button>
+</div>
+<div id="lBox"><input id="lPhone" placeholder="Phone 10 digit" type="number"><div style="display:flex;gap:6px"><input id="lOtp" placeholder="OTP" type="number" style="flex:1"><button onclick="sendOTP('login')" style="background:orange;color:#fff;border:none;border-radius:10px;padding:12px">OTP</button></div><button onclick="doLogin()" style="width:100%;background:#0f172a;color:#ffcc00;margin-top:8px;padding:12px;border:none;border-radius:10px">LOGIN</button><p style="text-align:center;margin-top:8px"><a href="#" onclick="showReg()">New Register</a> | <a href="#" onclick="showForgot()">Forgot?</a></p></div><div id="rBox" style="display:none"><input id="rName" placeholder="Full Name"><input id="rPhone" placeholder="Phone" type="number"><input id="rAddr" placeholder="Address"><div style="display:flex;gap:6px"><input id="rOtp" placeholder="OTP" type="number" style="flex:1"><button onclick="sendOTP('reg')" style="background:orange;color:#fff;border:none;border-radius:10px;padding:12px">OTP</button></div><button onclick="doReg()" style="width:100%;background:green;color:#fff;margin-top:8px;padding:12px;border:none;border-radius:10px">REGISTER</button><p style="text-align:center"><a href="#" onclick="showLogin()">Login</a></p></div>
+<div id="fBox" style="display:none"><input id="fPhone" placeholder="Phone" type="number"><button onclick="sendOTP('forgot')" style="width:100%;background:orange;color:#fff;padding:12px;border:none;border-radius:10px;margin-top:6px">Send OTP</button><input id="fOtp" placeholder="OTP" type="number" style="display:none;margin-top:8px"><button id="fBtn" onclick="doForgot()" style="width:100%;background:#0b5bff;color:#fff;display:none;margin-top:8px;padding:12px;border:none;border-radius:10px">Login</button></div>
+</div></div>
+<div id="topBarCust" style="display:none;position:fixed;top:0;left:0;width:100%;background:#0f172a;color:#ffcc00;padding:8px 12px;z-index:99999;justify-content:space-between"><span id="cNameShow"></span><button onclick="doLogout()" style="background:red;color:#fff;padding:6px 10px;border:none;border-radius:5px">Logout</button></div>
+
+<script>
+const FIX_LOC={"Bokakhat Town":[26.6247,93.6035],"Bokakhat":[26.6247,93.6035],"Golaghat Town":[26.51,93.96],"Golaghat":[26.51,93.96],"Numaligarh":[26.59,93.70],"Jorhat":[26.75,94.20],"Kaziranga":[26.57,93.41]};
+let CFG={vehicles:[{name:"Auto",rate:15,icon:"🛺"},{name:"Mini",rate:15,icon:"🚗"},{name:"Sedan",rate:20,icon:"🚙"},{name:"SUV",rate:25,icon:"🚐"}],locations:Object.keys(FIX_LOC),adminCred:{user:"admin",pass:"admin123"}};
+let map,map2,map3,c_live_map,fromLatLng,toLatLng,fromMarker,toMarker,driverMarker,watchId,mapClickMode=true,fromName="",toName="";
+const bokakhat=[26.6247,93.6035];
+function getTileLayer(){return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});}
+function initMaps(){
+map=L.map('map').setView(bokakhat,13);getTileLayer().addTo(map);
+map2=L.map('map2').setView(bokakhat,13);getTileLayer().addTo(map2);
+map3=L.map('map3').setView(bokakhat,13);getTileLayer().addTo(map3);
+map.on('click',e=>{if(!mapClickMode)return;if(!fromLatLng){fromLatLng=e.latlng;fromName="Map "+e.latlng.lat.toFixed(3);if(fromMarker)map.removeLayer(fromMarker);fromMarker=L.marker(fromLatLng).addTo(map).bindTooltip("FROM: "+fromName,{permanent:true}).openTooltip();document.getElementById('c_from').value=fromName;}else{toLatLng=e.latlng;toName="Map "+e.latlng.lat.toFixed(3);if(toMarker)map.removeLayer(toMarker);toMarker=L.marker(toLatLng).addTo(map).bindTooltip("TO: "+toName,{permanent:true}).openTooltip();document.getElementById('c_to').value=toName;calcKM();}});
+}
+let taps=0,adminUnlocked=false;
+document.getElementById('logoText').addEventListener('click',()=>{taps++;if(taps>=5){adminUnlocked=true;document.getElementById('admBtn').classList.remove('hidden');}setTimeout(()=>taps=0,2500);});
+function searchLocation(q,type){
+let box=document.getElementById(type=='from'?'suggestFrom':'suggestTo');
+if(!q){box.classList.add('hidden');return;}
+let m=Object.keys(FIX_LOC).filter(k=>k.toLowerCase().includes(q.toLowerCase()));
+if(!m.length){box.classList.add('hidden');return;}
+box.innerHTML=m.map(l=>`<div style="padding:12px;border-bottom:1px solid #eee;cursor:pointer" onclick="selectLocal('${l}','${type}')">📍 ${l}</div>`).join('');
+box.classList.remove('hidden');
+}
+function selectLocal(name,type){
+let ll=FIX_LOC[name];let latlng=L.latLng(ll[0],ll[1]);
+if(type=='from'){fromLatLng=latlng;fromName=name;if(fromMarker)map.removeLayer(fromMarker);fromMarker=L.marker(fromLatLng).addTo(map).bindTooltip("FROM: "+name,{permanent:true}).openTooltip();map.setView(fromLatLng,15);document.getElementById('c_from').value=name;document.getElementById('suggestFrom').classList.add('hidden');}
+else{toLatLng=latlng;toName=name;if(toMarker)map.removeLayer(toMarker);toMarker=L.marker(toLatLng).addTo(map).bindTooltip("TO: "+name,{permanent:true}).openTooltip();map.setView(toLatLng,15);document.getElementById('c_to').value=name;document.getElementById('suggestTo').classList.add('hidden');}
+if(fromLatLng&&toLatLng)calcKM();
+}
+function useCurrentLocation(){navigator.geolocation.getCurrentPosition(pos=>{fromLatLng=L.latLng(pos.coords.latitude,pos.coords.longitude);fromName="My Current Location";if(fromMarker)map.removeLayer(fromMarker);fromMarker=L.marker(fromLatLng).addTo(map).bindTooltip("YOU",{permanent:true}).openTooltip();map.setView(fromLatLng,16);document.getElementById('c_from').value=fromName;if(toLatLng)calcKM();},{},{enableHighAccuracy:true});}
+function useMapClickMode(){mapClickMode=true;fromLatLng=null;toLatLng=null;fromName="";toName="";if(fromMarker)map.removeLayer(fromMarker);if(toMarker)map.removeLayer(toMarker);document.getElementById('c_from').value="";document.getElementById('c_to').value="";}
+function showP(p){
+if(p=='admin'&&!adminUnlocked){alert("Logo 5 click karo");return;}
+['customer','driver','admin'].forEach(x=>document.getElementById('p-'+x).classList.add('hidden'));
+document.getElementById('p-'+p).classList.remove('hidden');
+localStorage.setItem('et_current_page',p);
+if(p=='customer')checkLogin();else{document.getElementById('custLoginModal').style.display='none';document.getElementById('topBarCust').style.display='none';}
+setTimeout(()=>{map.invalidateSize();map2.invalidateSize();map3.invalidateSize();if(c_live_map)c_live_map.invalidateSize();},400);
+}
+function refreshVeh(){document.getElementById('c_veh').innerHTML=CFG.vehicles.map(v=>`<option value="${v.name}">${v.icon} ${v.name} - ₹${v.rate}/km</option>`).join('');document.getElementById('d_vtype').innerHTML=CFG.vehicles.map(v=>`<option value="${v.name}">${v.icon} ${v.name}</option>`).join('');document.getElementById('d_loc').innerHTML=CFG.locations.map(l=>`<option>${l}</option>`).join('');}function calcKM(){if(!fromLatLng||!toLatLng)return;let R=6371,dLat=(toLatLng.lat-fromLatLng.lat)*Math.PI/180,dLon=(toLatLng.lng-fromLatLng.lng)*Math.PI/180;let a=Math.sin(dLat/2)**2+Math.cos(fromLatLng.lat*Math.PI/180)*Math.cos(toLatLng.lat*Math.PI/180)*Math.sin(dLon/2)**2;let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));let km=R*c;document.getElementById('c_km').value=km.toFixed(2);let sel=document.getElementById('c_veh').value;let veh=CFG.vehicles.find(v=>sel.includes(v.name)||v.name==sel);let rate=veh?veh.rate:15;document.getElementById('c_price').innerText="₹"+(km*rate+50).toFixed(0);}
+function regDriver(){let n=document.getElementById('d_name').value.trim();let ph=document.getElementById('d_phone').value.trim();let ps=document.getElementById('d_pass').value.trim();let vehno=document.getElementById('d_vehno').value.trim();if(!n||!ph||!ps||!vehno)return alert("All fields");let d={id:Date.now(),name:n,phone:ph,pass:ps,vehno:vehno,vtype:document.getElementById('d_vtype').value,status:"approved"};let arr=JSON.parse(localStorage.getItem('et_drivers')||'[]');arr.push(d);localStorage.setItem('et_drivers',JSON.stringify(arr));alert("Register Done! Login karo");}
+function loginDriver(){let ph=document.getElementById('d_login_phone').value;let ps=document.getElementById('d_login_pass').value;let arr=JSON.parse(localStorage.getItem('et_drivers')||'[]');let f=arr.find(x=>x.phone==ph&&x.pass==ps);if(!f)return alert("Wrong");localStorage.setItem('et_current_driver',JSON.stringify(f));document.getElementById('d_auth').classList.add('hidden');document.getElementById('d_dash').classList.remove('hidden');document.getElementById('d_status').innerHTML=`<div style="background:#dcfce7;padding:10px;border-radius:12px"><b>${f.name} | ${f.vehno}</b></div>`;loadDriverBookings();}
+function logoutDriver(){if(watchId)navigator.geolocation.clearWatch(watchId);localStorage.removeItem('et_current_driver');document.getElementById('d_auth').classList.remove('hidden');document.getElementById('d_dash').classList.add('hidden');}
+function trackMe(){let cur=JSON.parse(localStorage.getItem('et_current_driver'));if(!cur)return;watchId=navigator.geolocation.watchPosition(pos=>{let loc={lat:pos.coords.latitude,lng:pos.coords.longitude};localStorage.setItem('et_driver_loc_'+cur.phone,JSON.stringify(loc));if(window.fbDb)window.fbDb.ref('driver_locs/'+cur.phone).set(loc);if(driverMarker)map2.removeLayer(driverMarker);driverMarker=L.marker([loc.lat,loc.lng]).addTo(map2).bindPopup("YOU LIVE").openPopup();map2.setView([loc.lat,loc.lng],16);},null,{enableHighAccuracy:true});alert("✅ Live ON - Customer dekhega");}
+function loadDriverBookings(){let arr=JSON.parse(localStorage.getItem('et_book')||'[]').filter(b=>b.status=="pending");document.getElementById('d_area').innerHTML=arr.map(b=>`<div style="background:#fff;padding:12px;border-radius:12px;margin-top:8px;border:2px solid #000"><b>📍 ${b.fromName}</b> → ${b.toName}<br>👤 ${b.name} | ${b.phone}<br>💰 ${b.price}<br><button class="btn btn-y" onclick="acceptBook(${b.id})">✅ Accept</button><button class="btn btn-b" style="margin-top:6px" onclick="showBlueDriverLive(${b.fromLat},${b.fromLng},${b.toLat},${b.toLng})">🔵 Blue Line</button></div>`).join('')||"No bookings - Firebase se ayega";}
+function adminLogin(){let u=document.getElementById('a_user').value;let p=document.getElementById('a_pass').value;if(u==CFG.adminCred.user&&p==CFG.adminCred.pass){document.getElementById('adminLogin').classList.add('hidden');document.getElementById('adminArea').classList.remove('hidden');loadAdmin();}else alert("Wrong");}
+function loadAdmin(){let arr=JSON.parse(localStorage.getItem('et_book')||'[]');document.getElementById('adminBookings').innerHTML=arr.map(b=>`<div style="border:2px solid #000;padding:10px;margin-top:6px;border-radius:10px">${b.fromName} → ${b.toName} | ${b.phone} | ${b.status}</div>`).join('');}
+window.onload=()=>{
+initMaps();refreshVeh();
+setTimeout(()=>{
+map.invalidateSize();map2.invalidateSize();map3.invalidateSize();
+let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+let dl=localStorage.getItem('et_driver_loc_'+cur.phone);
+if(dl){let d=JSON.parse(dl); map2.setView([d.lat,d.lng],15);}
+else if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>map2.setView([p.coords.latitude,p.coords.longitude],15),null,{enableHighAccuracy:true});}
+},1200);
+checkLogin();
+};
+</script>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyAl3Y4UJ9XdI3xBXNF6PuIAypz3PjYv1ng",authDomain:"easy-trip-d601a.firebaseapp.com",databaseURL:"https://easy-trip-d601a-default-rtdb.firebaseio.com",projectId:"easy-trip-d601a",storageBucket:"easy-trip-d601a.appspot.com",messagingSenderId:"123456789000",appId:"1:123456789000:web:abcdef123456"};
+try{firebase.initializeApp(firebaseConfig);window.fbDb=firebase.database();}catch(e){}
+</script>
+
+<script>
+let tempOTP="",tempPhone="";
+function genOTP(){return Math.floor(1000+Math.random()*9000).toString();}
+function checkLogin(){
+let cur=localStorage.getItem('et_current_page')||'customer';
+if(cur!='customer'){document.getElementById('custLoginModal').style.display='none';document.getElementById('topBarCust').style.display='none';return;}
+let ph=localStorage.getItem('et_customer_logged');
+if(!ph){document.getElementById('custLoginModal').style.display='flex';}
+else{let da=JSON.parse(localStorage.getItem('et_customer_data')||'{}');document.getElementById('custLoginModal').style.display='none';document.getElementById('topBarCust').style.display='flex';document.getElementById('cNameShow').innerText='👤 '+da.name+' | '+da.phone;document.body.style.paddingTop='40px';}
+}
+function showLogin(){lBox.style.display='block';rBox.style.display='none';fBox.style.display='none';}
+function showReg(){lBox.style.display='none';rBox.style.display='block';fBox.style.display='none';}
+function showForgot(){lBox.style.display='none';rBox.style.display='none';fBox.style.display='block';}
+function sendOTP(t){
+let ph=t=='reg'?rPhone.value:t=='login'?lPhone.value:fPhone.value;
+if(!ph||ph.length!=10){alert('10 digit phone dalo');return;}
+if(t!='reg'){let a=JSON.parse(localStorage.getItem('et_all_cust')||'[]');if(!a.find(x=>x.phone==ph)){alert('Pehle Register karo');showReg();return;}}
+tempOTP=genOTP();tempPhone=ph;alert('🔵 Aapka OTP: '+tempOTP+' (yahi dalo)');
+if(t=='forgot'){fOtp.style.display='block';fBtn.style.display='block';}
+}
+function doReg(){if(rOtp.value!=tempOTP||rPhone.value!=tempPhone){alert('OTP galat');return;}let a=JSON.parse(localStorage.getItem('et_all_cust')||'[]');if(a.find(x=>x.phone==rPhone.value)){alert('Already registered');return;}let d={name:rName.value,phone:rPhone.value,address:rAddr.value};a.push(d);localStorage.setItem('et_all_cust',JSON.stringify(a));localStorage.setItem('et_customer_data',JSON.stringify(d));localStorage.setItem('et_customer_logged',d.phone);location.reload();}
+function doLogin(){if(lOtp.value!=tempOTP||lPhone.value!=tempPhone){alert('OTP galat');return;}let a=JSON.parse(localStorage.getItem('et_all_cust')||'[]');let f=a.find(x=>x.phone==lPhone.value);if(!f)return alert('Registered nahi');localStorage.setItem('et_customer_data',JSON.stringify(f));localStorage.setItem('et_customer_logged',f.phone);location.reload();}
+function doForgot(){if(fOtp.value!=tempOTP||fPhone.value!=tempPhone){alert('OTP galat');return;}let a=JSON.parse(localStorage.getItem('et_all_cust')||'[]');let f=a.find(x=>x.phone==fPhone.value);localStorage.setItem('et_customer_data',JSON.stringify(f));localStorage.setItem('et_customer_logged',f.phone);location.reload();}
+function doLogout(){localStorage.removeItem('et_customer_logged');localStorage.removeItem('et_customer_data');location.reload();}
+const FB_BOOK_PATH="bookings_v33_5";function syncBookingToFirebase(b){try{if(window.fbDb)window.fbDb.ref(FB_BOOK_PATH+'/'+b.id).set(b);}catch(e){}}
+function book(){
+if(!fromLatLng||!toLatLng||!fromName||!toName)return alert("From/To select karo");
+let phone=document.getElementById('c_phone').value.trim();
+let name=document.getElementById('c_name').value.trim();
+if(!phone||!name)return alert("Phone + Naam dalo");
+let otp=Math.floor(1000+Math.random()*9000);
+let custData=JSON.parse(localStorage.getItem('et_customer_data')||'{}');
+let b={id:Date.now(),fromName:fromName,toName:toName,fromLat:fromLatLng.lat,fromLng:fromLatLng.lng,toLat:toLatLng.lat,toLng:toLatLng.lng,from:fromName,to:toName,km:document.getElementById('c_km').value,price:document.getElementById('c_price').innerText,vehicle:document.getElementById('c_veh').value,phone:phone,name:name,otp:otp,status:"pending",time:new Date().toLocaleString(),customerLoggedPhone:custData.phone||phone};
+let arr=JSON.parse(localStorage.getItem('et_book')||'[]');arr.push(b);localStorage.setItem('et_book',JSON.stringify(arr));
+syncBookingToFirebase(b);
+document.getElementById('c_msg').innerHTML=`<div style='background:#dcfce7;padding:12px;border-radius:12px;border:2px solid #22c55e'><b>✅ Booked!</b> ${name} (${phone})<br>📍 ${fromName} → ${toName}<br>OTP: <b>${otp}</b><br>🔥 Firebase se Driver ko jayega!</div>`;
+document.getElementById('c_otp_show').classList.remove('hidden');
+document.getElementById('c_otp_show').innerHTML=`<div style='text-align:center'><b style='font-size:22px'>OTP: ${otp}</b><br>Customer: ${name}</div>`;
+document.getElementById('c_live_section').classList.remove('hidden');
+}
+if(window.fbDb){
+window.fbDb.ref(FB_BOOK_PATH).on('value',snap=>{
+let data=snap.val();
+if(data){let fbArr=Object.values(data);localStorage.setItem('et_book',JSON.stringify(fbArr));try{loadDriverBookings();}catch(e){}try{loadAdmin();}catch(e){}}
+});
+}
+window.acceptBook=function(id){
+let arr=JSON.parse(localStorage.getItem('et_book')||'[]');let b=arr.find(x=>String(x.id)==String(id));if(!b)return;
+let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+b.status='accepted';b.driver=cur.phone;b.driverPhone=cur.phone;
+let dLoc=localStorage.getItem('et_driver_loc_'+cur.phone);
+if(dLoc){try{let dl=JSON.parse(dLoc);b.driverLat=dl.lat;b.driverLng=dl.lng;}catch(e){}}
+localStorage.setItem('et_book',JSON.stringify(arr));
+syncBookingToFirebase(b);
+alert('✅ Accept Kiya! Blue Line Driver LIVE se Customer tak ayega');
+showBlueDriverLive(b.driverLat||b.fromLat, b.driverLng||b.fromLng, b.fromLat, b.fromLng);
+loadDriverBookings();
+};
+let _blueLine=null;
+let custLiveMarker=null;
+let _c_blueLine=null;
+window.showBlueDriverLive=function(f1,f2,t1,t2){
+let m=window.map2||window.map;
+try{if(_blueLine)m.removeLayer(_blueLine);}catch(e){}
+_blueLine=L.polyline([[f1,f2],[t1,t2]],{color:'blue',weight:7}).addTo(m);
+m.fitBounds(_blueLine.getBounds(),{padding:[30,30]});
+fetch(`https://router.project-osrm.org/route/v1/driving/${f2},${f1};${t2},${t1}?overview=full&geometries=geojson`).then(r=>r.json()).then(d=>{if(d.routes&&d.routes[0]){try{m.removeLayer(_blueLine)}catch(e){};_blueLine=L.geoJSON(d.routes[0].geometry,{style:{color:'#0b5bff',weight:7}}).addTo(m);}});
+// Customer map pe bhi blue line + drop address dikhao
+if(!c_live_map){try{c_live_map=L.map('c_live_map').setView([f1,f2],13);getTileLayer().addTo(c_live_map);}catch(e){}}
+try{if(_c_blueLine)c_live_map.removeLayer(_c_blueLine);}catch(e){}
+_c_blueLine=L.polyline([[f1,f2],[t1,t2]],{color:'blue',weight:7,dashArray:'10,10'}).addTo(c_live_map);
+c_live_map.fitBounds(_c_blueLine.getBounds(),{padding:[20,20]});
+let arr=JSON.parse(localStorage.getItem('et_book')||'[]');let b=arr[arr.length-1];
+if(b){
+try{document.getElementById('c_live_info').innerHTML=`🚗 Driver LIVE Aa Raha Hai<br>📍 Pickup: ${b.fromName}<br>📍 Drop: ${b.toName}<br>🔵 Blue Line = Driver se Aap tak`;}catch(e){}
+}
+};
+
+// Customer ko LIVE Driver location + Blue Line + Drop address Firebase se dikhega
+if(window.fbDb){
+window.fbDb.ref('driver_locs').on('value',snap=>{
+let locs=snap.val();if(!locs)return;
+let arr=JSON.parse(localStorage.getItem('et_book')||'[]');if(!arr.length)return;
+let last=arr[arr.length-1];if(!last.driverPhone)return;
+let dloc=locs[last.driverPhone];if(!dloc)return;
+if(!c_live_map){try{c_live_map=L.map('c_live_map').setView([dloc.lat,dloc.lng],13);getTileLayer().addTo(c_live_map);}catch(e){return;}}
+try{if(_c_blueLine)c_live_map.removeLayer(_c_blueLine);}catch(e){}
+_c_blueLine=L.polyline([[dloc.lat,dloc.lng],[last.fromLat,last.fromLng]],{color:'blue',weight:7,dashArray:'10,10'}).addTo(c_live_map);
+try{if(custLiveMarker)c_live_map.removeLayer(custLiveMarker);}catch(e){}
+custLiveMarker=L.marker([dloc.lat,dloc.lng]).addTo(c_live_map).bindPopup("🚗 Driver LIVE - Aa Raha Hai").openPopup();
+try{c_live_map.fitBounds(_c_blueLine.getBounds(),{padding:[20,20]});}catch(e){}
+let info=document.getElementById('c_live_info');
+if(info)info.innerHTML=`🚗 Driver LIVE: ${dloc.lat.toFixed(4)}, ${dloc.lng.toFixed(4)}<br>📍 Pickup: ${last.fromName}<br>📍 Drop: ${last.toName}<br>🔵 Blue Line Driver → Pickup<br>🟢 Drop: ${last.toName}`;
+});
+}
+
+navigator.geolocation.watchPosition(p=>{
+let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+if(cur.phone){
+let loc={lat:p.coords.latitude,lng:p.coords.longitude};
+localStorage.setItem('et_driver_loc_'+cur.phone,JSON.stringify(loc));
+if(window.fbDb){window.fbDb.ref('driver_locs/'+cur.phone).set({lat:loc.lat,lng:loc.lng,time:Date.now()});}
+}
+},{}, {enableHighAccuracy:true});
+setTimeout(checkLogin,800);
+</script>
+</body>
+</html>
