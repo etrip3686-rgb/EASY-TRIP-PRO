@@ -673,5 +673,88 @@ function getDistance(lat1, lon1, lat2, lon2){
 }
 </script>
 <!-- FIREBASE CODE KHATAM -->
+ <script>
+// ===== FINAL FIXED - EASY TRIP =====
+function showRoute(fLat,fLng,tLat,tLng){
+  try{ if(routeLine) map.removeLayer(routeLine); }catch(e){}
+  if(!fLat||!fLng||!tLat||!tLng) return;
+  routeLine = L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#0b5bff',weight:6,dashArray:'12,12'}).addTo(map);
+  try{ map.fitBounds(routeLine.getBounds(),{padding:[50,50]}); }catch(e){}
+  fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`)
+ .then(r=>r.json()).then(d=>{
+    if(d.routes && d.routes[0]){
+      try{ map.removeLayer(routeLine); }catch(e){}
+      routeLine = L.geoJSON(d.routes[0].geometry,{style:{color:'#0b5bff',weight:7}}).addTo(map);
+    }
+  });
+}
+function showRouteDriver(fLat,fLng,tLat,tLng, m){
+  let mapTarget = m || map2; if(!mapTarget) return;
+  try{ if(window._driverRoute) mapTarget.removeLayer(window._driverRoute); }catch(e){}
+  window._driverRoute = L.polyline([[fLat,fLng],[tLat,tLng]],{color:'blue',weight:7}).addTo(mapTarget);
+  try{ mapTarget.fitBounds(window._driverRoute.getBounds(),{padding:[30,30]}); }catch(e){}
+  fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`)
+ .then(r=>r.json()).then(d=>{
+    if(d.routes && d.routes[0]){
+      try{ mapTarget.removeLayer(window._driverRoute); }catch(e){}
+      window._driverRoute = L.geoJSON(d.routes[0].geometry,{style:{color:'blue',weight:7}}).addTo(mapTarget);
+    }
+  });
+}
+function ET_calcDist(a,b,c,d){let R=6371,d1=(c-a)*Math.PI/180,d2=(d-b)*Math.PI/180;let e=Math.sin(d1/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(d2/2)**2;return R*2*Math.atan2(Math.sqrt(e),Math.sqrt(1-e));}
+
+// ACCEPT FIX - Blue line ayega
+window.acceptBook = function(id){
+  let arr=JSON.parse(localStorage.getItem('et_book')||'[]');
+  let b=arr.find(x=>String(x.id)==String(id)); if(!b) return;
+  let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+  b.status='accepted'; b.driver=cur.phone; b.driverPhone=cur.phone;
+  let dloc=null; try{ dloc=JSON.parse(localStorage.getItem('et_driver_loc_'+cur.phone)||'null'); }catch(e){}
+  if(dloc){ b.driverLat=dloc.lat; b.driverLng=dloc.lng; } else if(typeof ET_dLoc!=='undefined' && ET_dLoc){ b.driverLat=ET_dLoc.lat; b.driverLng=ET_dLoc.lng; }
+  localStorage.setItem('et_book',JSON.stringify(arr));
+  alert('✅ Accepted! Ab Blue Line dekho');
+  if(b.driverLat && b.fromLat){ showRouteDriver(b.driverLat,b.driverLng,b.fromLat,b.fromLng,map2); }
+  else { showRouteDriver(b.fromLat,b.fromLng,b.toLat,b.toLng,map2); }
+  FIX_DriverView();
+}
+
+// BLUE LINE BUTTON FIX
+window.ET_showBlue = function(id){
+  let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id)); if(!b) return;
+  let m=map2||map; let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+  let dloc=null; try{ dloc=JSON.parse(localStorage.getItem('et_driver_loc_'+cur.phone)||'null'); }catch(e){}
+  if(!dloc && typeof ET_dLoc!=='undefined') dloc=ET_dLoc;
+  try{ if(window.EB1) m.removeLayer(window.EB1); }catch(e){}
+  if(b.status=='accepted' && dloc){
+    window.EB1=L.polyline([[dloc.lat,dloc.lng],[b.fromLat,b.fromLng]],{color:'#0b5bff',weight:7}).addTo(m);
+    m.setView([b.fromLat,b.fromLng],14);
+  } else {
+    window.EB1=L.polyline([[b.fromLat,b.fromLng],[b.toLat,b.toLng]],{color:'blue',weight:7}).addTo(m);
+    m.setView([b.fromLat,b.fromLng],13);
+  }
+  L.marker([b.fromLat,b.fromLng]).addTo(m).bindPopup('Pickup');
+  L.marker([b.toLat,b.toLng]).addTo(m).bindPopup('Drop');
+}
+
+// COMPLETE FIX - Bina OTP ke, sirf Drop pe
+window.completeTrip = function(id){
+  let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id));
+  let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+  let dloc=null; try{ dloc=JSON.parse(localStorage.getItem('et_driver_loc_'+cur.phone)||'null'); }catch(e){}
+  if(!dloc && typeof ET_dLoc!=='undefined') dloc=ET_dLoc;
+  if(dloc){
+    let dist=ET_calcDist(dloc.lat,dloc.lng,b.toLat,b.toLng);
+    if(dist>0.2){ alert('❌ Abhi Drop pe nahi ho! '+dist.toFixed(2)+' KM dur ho. Blue line follow karo!'); return; }
+  } else {
+    if(!confirm('Location OFF hai, Drop pe pahuch gaye? Complete kar du?')) return;
+  }
+  b.status='completed'; b.completedAt=new Date().toLocaleString();
+  localStorage.setItem('et_book',JSON.stringify(arr));
+  alert('✅ Trip Completed ₹'+b.price); FIX_DriverView();
+}
+
+// Map2 ko Bokakhat pe fix karo - Nepal hatao
+setTimeout(()=>{ try{ map2.setView([26.6247,93.6035],13); map2.invalidateSize(); }catch(e){} },1000);
+</script>
 </body>
 </html>
