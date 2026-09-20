@@ -562,194 +562,194 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
 })();
 </script>
 <!-- FIREBASE CODE KHATAM -->
-<!-- ===== PATCH V2 - DRIVER LOCATION + CUSTOMER LOGIN + BLUE LINE ===== -->
-<style>
-.map{height:380px!important;min-height:380px!important;display:block!important;background:#e2e8f0}
-#c_map, #d_map, #c_live_map{height:380px!important}
-</style>
+<!-- ===== PATCH V3 FINAL - CROSS PHONE + OTP PICKUP + BLUE LINE ===== -->
 <script>
-console.log("PATCH V2 LOADED");
+console.log("PATCH V3");
 
-// 1. CUSTOMER LOGIN + FORGOT PASSWORD - Refresh pe booking gayab nahi hoga
-if(!localStorage.getItem('et_customers')) localStorage.setItem('et_customers', JSON.stringify([]));
-
-window.customerLogin = function(){
- let phone = (document.getElementById('c_phone')?.value||'').trim();
- let name = (document.getElementById('c_name')?.value||'').trim();
- if(phone.length<10) return alert("Phone 10 digit dalo");
- let customers = JSON.parse(localStorage.getItem('et_customers')||'[]');
- let found = customers.find(c=>c.phone==phone);
- if(!found){
-   let pass = prompt("Naya customer - Password banao (4 digit):")||"1234";
-   customers.push({phone:phone,name:name||"Customer",pass:pass,time:Date.now()});
-   localStorage.setItem('et_customers', JSON.stringify(customers));
-   alert("✅ Account bana - Phone: "+phone+" Pass: "+pass);
- }
- localStorage.setItem('et_customer_login', JSON.stringify({phone:phone,name:name,time:Date.now()}));
- localStorage.setItem('et_customer_data', JSON.stringify({phone:phone,name:name}));
- document.getElementById('c_msg').innerHTML = `<div style="background:#dcfce7;padding:8px;border-radius:8px">✅ Login: ${phone} - Booking refresh pe nahi gayab hoga</div>`;
- showCustomerHistory();
- try{map.invalidateSize();}catch(e){}
-};
-
-window.customerForgotPass = function(){
- let phone = prompt("Phone dalo jiska password bhul gaye:");
- if(!phone) return;
- let customers = JSON.parse(localStorage.getItem('et_customers')||'[]');
- let f = customers.find(c=>c.phone==phone);
- if(!f) return alert("Is phone ka account nahi mila");
- alert("Aapka Password: "+f.pass+"\nPhone: "+f.phone);
- let newPass = prompt("Naya password dalna hai? (Cancel to skip)");
- if(newPass){ f.pass=newPass; localStorage.setItem('et_customers', JSON.stringify(customers)); alert("Password change ho gaya: "+newPass); }
-};
-
-// Page load pe customer auto-login restore
-(function(){
- let login = JSON.parse(localStorage.getItem('et_customer_login')||'null');
- let data = JSON.parse(localStorage.getItem('et_customer_data')||'null');
- if(login && login.phone){
-   if(document.getElementById('c_phone')) document.getElementById('c_phone').value = login.phone;
-   if(document.getElementById('c_name') && login.name) document.getElementById('c_name').value = login.name;
-   if(document.getElementById('c_msg')) document.getElementById('c_msg').innerHTML = `<div style="background:#dbeafe;padding:6px;border-radius:6px;font-size:12px">🔄 Auto Login: ${login.phone} <button onclick="localStorage.removeItem('et_customer_login');location.reload()" style="float:right">Logout</button></div>`;
- }
-})();
-
-// Login/Forgot button customer form me add karo agar nahi hai
-setTimeout(()=>{
- let cPhone = document.getElementById('c_phone');
- if(cPhone &&!document.getElementById('custLoginBtn')){
-   let div = document.createElement('div');
-   div.innerHTML = `<div style="display:flex;gap:6px;margin-top:6px"><button id="custLoginBtn" onclick="customerLogin()" style="flex:1;padding:10px;background:#0f172a;color:#ffcc00;border:2px solid #000;border-radius:8px;font-weight:700">🔐 Login / Save</button><button onclick="customerForgotPass()" style="flex:1;padding:10px;background:#fff;border:2px solid #000;border-radius:8px;font-weight:700">❓ Forgot Pass</button></div><small style="font-size:10px">Login karoge to refresh pe booking nahi gayab hogi</small>`;
-   cPhone.parentNode.insertBefore(div, cPhone.nextSibling.nextSibling||cPhone.nextSibling);
- }
-},1500);
-
-// 2. DRIVER LOCATION GALAT FIX - Nepal wala hataya, direct GPS + Guwahati center
-window.trackMe = function(){
- let cur = JSON.parse(localStorage.getItem('et_current_driver')||'{}');
- if(!cur.phone) return alert("Driver login karo pehle");
- if(!navigator.geolocation) return alert("GPS support nahi");
-
- document.getElementById('d_status').innerHTML = "📍 Location le rahe hai... Allow karo";
-
- navigator.geolocation.getCurrentPosition(pos=>{
-   let lat = pos.coords.latitude;
-   let lng = pos.coords.longitude;
-   let acc = pos.coords.accuracy;
-   console.log("GPS Raw:", lat, lng, "Acc:", acc);
-
-   // Galat location check - sirf tabhi Guwahati jab bilkul bahar ho India se
-   if(lat<8 || lat>37 || lng<68 || lng>97){
-     alert("GPS galat location de raha hai ("+lat.toFixed(2)+"). Guwahati center use kar rahe hai. Bahar jake ON karo GPS.");
-     lat = 26.1445 + (Math.random()-0.5)*0.02;
-     lng = 91.7362 + (Math.random()-0.5)*0.02;
-   }
-
-   let loc = {lat:lat,lng:lng,acc:acc,time:Date.now(),driver:cur.phone,name:cur.name};
-   localStorage.setItem('et_driver_loc_'+cur.phone, JSON.stringify(loc));
-   try{if(window.fbDb) fbDb.ref('driver_locs/'+cur.phone).set(loc);}catch(e){}
-
-   let m = window.map2||window.map||window.dmap;
-   if(m){
-     try{if(window.driverMarker) m.removeLayer(window.driverMarker);}catch(e){}
-     window.driverMarker = L.marker([lat,lng],{
-       icon:L.icon({iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',iconSize:[40,40],iconAnchor:[20,40]})
-     }).addTo(m).bindPopup(`🚗 ${cur.name}<br>📍 ${lat.toFixed(5)},${lng.toFixed(5)}<br>Acc: ${Math.round(acc)}m<br>✅ LIVE ON`).openPopup();
-     m.setView([lat,lng],16);
-     setTimeout(()=>m.invalidateSize(),300);
-   }
-   document.getElementById('d_status').innerHTML = `<b>✅ ${cur.name} LIVE</b><br>📍 ${lat.toFixed(5)},${lng.toFixed(5)} Acc:${Math.round(acc)}m`;
-   alert("✅ LIVE ON - Sahi location: "+lat.toFixed(5)+","+lng.toFixed(5));
-
- }, err=>{
-   alert("GPS Error: "+err.message+" - GPS ON karo + Location Allow karo + Bahar jao");
-   document.getElementById('d_status').innerHTML = "❌ GPS Error: "+err.message;
- }, {enableHighAccuracy:true,timeout:30000,maximumAge:0});
-};
-
-// 3. BLUE LINE 🔵 FIX - Road follow wala
-window.showBlueDriverLive = function(fLat,fLng,tLat,tLng){
- console.log("BLUE LINE:",fLat,fLng,tLat,tLng);
- let m1 = window.map2||window.map;
- let m2 = window.c_live_map||window.map;
-
- function drawLine(mapObj, color){
-   if(!mapObj) return;
-   try{
-     if(color=='blue'){
-       if(window._blueLine) try{mapObj.removeLayer(window._blueLine);}catch(e){}
-     } else {
-       if(window._c_blueLine) try{mapObj.removeLayer(window._c_blueLine);}catch(e){}
-     }
-     // Simple straight blue line pehle
-     let line = L.polyline([[fLat,fLng],[tLat,tLng]],{color:color,weight:7,opacity:0.9,dashArray:color=='blue'?'':'12,8'}).addTo(mapObj);
-     if(color=='blue') window._blueLine=line; else window._c_blueLine=line;
-     try{mapObj.fitBounds(line.getBounds(),{padding:[40,40]});}catch(e){}
-     mapObj.invalidateSize();
-   }catch(e){console.log("Line error",e);}
- }
-
- drawLine(m1,'#0b5bff');
- drawLine(m2,'blue');
-
- // Road wali blue line OSRM se
- fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`)
-.then(r=>r.json()).then(d=>{
-   if(d.routes && d.routes[0] && d.routes[0].geometry){
-     if(m1){
-       try{if(window._blueLine) m1.removeLayer(window._blueLine);}catch(e){}
-       window._blueLine = L.geoJSON(d.routes[0].geometry,{style:{color:'#0b5bff',weight:8,opacity:0.9}}).addTo(m1);
-       try{m1.fitBounds(window._blueLine.getBounds(),{padding:[40,40]});}catch(e){}
-     }
-     if(m2){
-       try{if(window._c_blueLine) m2.removeLayer(window._c_blueLine);}catch(e){}
-       window._c_blueLine = L.geoJSON(d.routes[0].geometry,{style:{color:'blue',weight:7,dashArray:'10,10'}}).addTo(m2);
-     }
-     let km = (d.routes[0].distance/1000).toFixed(2);
-     let info = document.getElementById('c_live_info');
-     if(info) info.innerHTML = `🔵 Blue Line Road: ${km}km - Driver se pickup tak<br>OSRM Road follow`;
-   }
- }).catch(e=>{
-   console.log("OSRM fail, straight line hi dikhega",e);
+// Firebase se customer booking lao - dusre phone pe bhi dikhega
+window.fetchCustomerBookingsFromFirebase = function(phone){
+ if(!window.fbDb ||!phone) return;
+ fbDb.ref('bookings_v33_5').orderByChild('phone').equalTo(phone).once('value', snap=>{
+   let data = snap.val();
+   if(!data) return;
+   let fbBooks = Object.values(data);
+   let local = JSON.parse(localStorage.getItem('et_book')||'[]');
+   fbBooks.forEach(fb=>{
+     if(!local.find(l=>String(l.id)==String(fb.id))) local.push(fb);
+   });
+   localStorage.setItem('et_book', JSON.stringify(local));
+   console.log("Firebase se "+fbBooks.length+" booking mili phone "+phone);
+   try{showCustomerHistory();}catch(e){}
+   try{loadDriverBookings();}catch(e){}
  });
 };
 
-// Customer live map pe bhi blue line dikhao jab booking accepted ho
-let oldShowCustHist = window.showCustomerHistory;
-window.showCustomerHistory = function(){
- if(oldShowCustHist) try{oldShowCustHist();}catch(e){}
- try{
-   let cust = JSON.parse(localStorage.getItem('et_customer_data')||localStorage.getItem('et_customer_login')||'{}');
-   if(!cust.phone) return;
-   let all = JSON.parse(localStorage.getItem('et_book')||'[]');
-   let active = all.filter(b=>b.phone==cust.phone && (b.status=='accepted'||b.status=='started')).pop();
-   if(!active) return;
-   let dloc = JSON.parse(localStorage.getItem('et_driver_loc_'+active.driverPhone)||'null');
-   let fbLoc = null;
-   // Firebase se bhi check
-   if(!dloc){
-     // Local fallback - driver ka last location
-     dloc = {lat:active.fromLat, lng:active.fromLng};
-   }
-   if(dloc && active.fromLat){
-     setTimeout(()=>{
-       try{
-         if(window.c_live_map){
-           window.c_live_map.invalidateSize();
-           showBlueDriverLive(dloc.lat,dloc.lng,active.fromLat,active.fromLng);
-           document.getElementById('c_live_section')?.classList.remove('hidden');
-         }
-       }catch(e){}
-     },800);
-   }
- }catch(e){console.log(e);}
+// Customer Login = Firebase se history lao
+window.customerLogin = function(){
+ let phone = document.getElementById('c_phone')?.value.trim();
+ let name = document.getElementById('c_name')?.value.trim();
+ if(!phone || phone.length<10) return alert("Phone 10 digit");
+ localStorage.setItem('et_customer_login', JSON.stringify({phone:phone,name:name,time:Date.now()}));
+ localStorage.setItem('et_customer_data', JSON.stringify({phone:phone,name:name}));
+ document.getElementById('c_msg').innerHTML = `<div style="background:#dcfce7;padding:8px;border-radius:8px">✅ Login: ${phone} - Ab dusre phone pe bhi booking dikhegi (Firebase)</div>`;
+ fetchCustomerBookingsFromFirebase(phone);
+ showCustomerHistory();
 };
 
-setTimeout(()=>{
- try{if(window.map) map.invalidateSize(); if(window.map2) map2.invalidateSize(); if(window.c_live_map) c_live_map.invalidateSize();}catch(e){}
- console.log("✅ PATCH V2 APPLIED - Login+Location+Blue");
-},1200);
+window.customerForgotPass = function(){
+ let phone = prompt("Phone:"); if(!phone) return;
+ let customers = JSON.parse(localStorage.getItem('et_customers')||'[]');
+ let f = customers.find(c=>c.phone==phone);
+ if(f) alert("Password: "+f.pass);
+ else alert("Is phone ka local account nahi, lekin Firebase booking phone se login ho jayega. Phone: "+phone+" dal ke Login dabao");
+};
+
+// Auto restore + Firebase fetch on load
+(function(){
+ let login = JSON.parse(localStorage.getItem('et_customer_login')||'null');
+ if(login?.phone){
+   if(document.getElementById('c_phone')) document.getElementById('c_phone').value = login.phone;
+   setTimeout(()=>fetchCustomerBookingsFromFirebase(login.phone),1000);
+ }
+})();
+
+// DRIVER - OTP PICKUP PE HI, COMPLETE AKELA
+window.verifyPickupOTP = function(id){
+ let arr = JSON.parse(localStorage.getItem('et_book')||'[]');
+ let b = arr.find(x=>String(x.id)==String(id));
+ let inp = document.getElementById('otp_'+id);
+ if(!b) return alert("Booking nahi mili");
+ if(!inp || inp.value.trim()!=String(b.otp)) return alert("OTP galat! Sahi: "+b.otp+" - Customer se pucho");
+ // OTP SAHI = STARTED
+ b.status='started'; b.startedTime=new Date().toLocaleString(); b.pickupOTPVerified=true;
+ localStorage.setItem('et_book', JSON.stringify(arr));
+ try{if(window.fbDb) fbDb.ref('bookings_v33_5/'+b.id).update({status:'started',startedTime:b.startedTime,pickupOTPVerified:true});}catch(e){}
+ alert("✅ OTP OK - Pickup ho gaya! Ab sirf COMPLETE button rahega");
+ loadDriverBookings();
+};
+
+window.completeTrip = function(id){
+ if(!confirm("Trip complete karna hai? History me jayega")) return;
+ let arr = JSON.parse(localStorage.getItem('et_book')||'[]');
+ let b = arr.find(x=>String(x.id)==String(id)); if(!b) return;
+ b.status='completed'; b.completedTime=new Date().toLocaleString();
+ localStorage.setItem('et_book', JSON.stringify(arr));
+ try{if(window.fbDb) fbDb.ref('bookings_v33_5/'+b.id).update({status:'completed',completedTime:b.completedTime});}catch(e){}
+ alert("✅ Completed - Customer history me chala gaya");
+ loadDriverBookings();
+};
+
+// DRIVER PORTAL - SIRF 1 BUTTON LOGIC
+window.loadDriverBookings = function(){
+ let cur = JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+ if(!cur.phone) return;
+ // Firebase se bhi lao driver ki booking
+ if(window.fbDb){
+   fbDb.ref('bookings_v33_5').once('value', snap=>{
+     let val = snap.val(); if(!val) return;
+     let allFb = Object.values(val);
+     let local = JSON.parse(localStorage.getItem('et_book')||'[]');
+     let merged = [...local];
+     allFb.forEach(fb=>{ if(!merged.find(m=>String(m.id)==String(fb.id))) merged.push(fb); });
+     localStorage.setItem('et_book', JSON.stringify(merged));
+     renderDriver();
+   });
+ } else { renderDriver(); }
+
+ function renderDriver(){
+   let all = JSON.parse(localStorage.getItem('et_book')||'[]');
+   let arr = all.filter(b=>b.status=='pending' || (b.driverPhone==cur.phone && (b.status=='accepted'||b.status=='started')));
+   let area = document.getElementById('d_area'); if(!area) return;
+   if(!arr.length){ area.innerHTML="<div style='padding:10px'>No active booking - Firebase se check ho raha hai</div>"; return; }
+   area.innerHTML = arr.map(b=>{
+     if(b.status=='pending'){
+       return `<div style="background:#fff;padding:12px;border:2px solid #000;border-radius:12px;margin:8px 0">
+       <b>${b.fromName||b.from} → ${b.toName||b.to}</b><br>👤 ${b.name} ${b.phone} | ${b.price}<br>
+       OTP: <b>${b.otp}</b><br>
+       <button style="width:48%;padding:10px;background:#ffcc00;border:2px solid #000;border-radius:8px;font-weight:800" onclick="acceptBook(${b.id})">✅ Accept</button>
+       <button style="width:48%;padding:10px;background:#0f172a;color:#ffcc00;border:2px solid #000;border-radius:8px" onclick="showBlueDriverLive(${b.fromLat},${b.fromLng},${b.toLat},${b.toLng})">🔵 Blue Line</button></div>`;
+     }
+     if(b.status=='accepted'){
+       return `<div style="background:#fef3c7;padding:12px;border:3px solid orange;border-radius:12px;margin:8px 0">
+       <b style="color:orange">🔑 PICKUP - OTP LO CUSTOMER SE</b><br>${b.fromName}→${b.toName}<br>Customer OTP: <b style="font-size:20px">${b.otp}</b><br>
+       <input id="otp_${b.id}" placeholder="Customer ka OTP ${b.otp} yaha dalo" style="width:100%;padding:12px;border:3px solid #000;border-radius:8px;margin-top:6px;font-size:16px">
+       <button style="width:100%;padding:12px;background:#0f172a;color:#fff;border:2px solid #000;border-radius:10px;font-weight:800;margin-top:6px" onclick="verifyPickupOTP(${b.id})">✅ OTP SUBMIT - PICKUP KARO</button>
+       <small>OTP sahi hote hi Started hoga, tab Complete button ayega</small></div>`;
+     }
+     if(b.status=='started'){
+       return `<div style="background:#dbeafe;padding:12px;border:3px solid blue;border-radius:12px;margin:8px 0">
+       <b style="color:blue">🚗 STARTED - Ab Complete hi dikhega</b><br>${b.fromName}→${b.toName} | ${b.price}<br>
+       <button style="width:100%;padding:16px;background:#22c55e;color:#fff;border:3px solid #000;border-radius:12px;font-weight:900;font-size:18px" onclick="completeTrip(${b.id})">✅ COMPLETE TRIP - History me bhejo</button></div>`;
+     }
+   }).join('');
+ }
+};
+
+// BLUE 🔵 LINE + BLUE DOT FINAL FIX
+window.showBlueDriverLive = function(fLat,fLng,tLat,tLng){
+ console.log("BLUE LINE CALL",fLat,fLng,tLat,tLng);
+ if(!fLat||!fLng||!tLat||!tLng) return alert("Location nahi hai booking me");
+ let mDriver = window.map2 || window.dmap || window.map;
+ let mCust = window.c_live_map || window.map;
+
+ // Clear old
+ try{if(window._blueLine && mDriver) mDriver.removeLayer(window._blueLine);}catch(e){}
+ try{if(window._c_blueLine && mCust) mCust.removeLayer(window._c_blueLine);}catch(e){}
+ try{if(window._driverBlueDot && mDriver) mDriver.removeLayer(window._driverBlueDot);}catch(e){}
+
+ // Blue DOT - driver location
+ if(mDriver){
+   window._driverBlueDot = L.marker([fLat,fLng],{icon:L.icon({iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',iconSize:[42,42]})}).addTo(mDriver).bindPopup("🔵 Driver Yaha").openPopup();
+   window._blueLine = L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#0066ff',weight:8,opacity:0.9}).addTo(mDriver);
+   try{mDriver.fitBounds(window._blueLine.getBounds(),{padding:[50,50]}); mDriver.invalidateSize();}catch(e){}
+ }
+
+ if(mCust){
+   window._c_blueLine = L.polyline([[fLat,fLng],[tLat,tLng]],{color:'blue',weight:7,dashArray:'10,10',opacity:0.9}).addTo(mCust);
+   try{mCust.fitBounds(window._c_blueLine.getBounds(),{padding:[30,30]}); mCust.invalidateSize();}catch(e){}
+   document.getElementById('c_live_section')?.classList.remove('hidden');
+ }
+
+ // OSRM road blue line
+ fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`)
+.then(r=>r.json()).then(d=>{
+   if(d.routes && d.routes[0]){
+     let geom = d.routes[0].geometry;
+     if(mDriver){
+       try{mDriver.removeLayer(window._blueLine);}catch(e){}
+       window._blueLine = L.geoJSON(geom,{style:{color:'#0066ff',weight:9}}).addTo(mDriver);
+     }
+     if(mCust){
+       try{mCust.removeLayer(window._c_blueLine);}catch(e){}
+       window._c_blueLine = L.geoJSON(geom,{style:{color:'blue',weight:8,dashArray:'12,8'}}).addTo(mCust);
+     }
+     let km = (d.routes[0].distance/1000).toFixed(1);
+     let info = document.getElementById('c_live_info'); if(info) info.innerHTML = `🔵 Blue Road: ${km}km - Driver → Pickup`;
+   }
+ }).catch(e=>{console.log("OSRM fail straight line dikhega",e);});
+};
+
+// Customer history = Firebase se, dusre phone pe bhi
+let _oldCustHist = window.showCustomerHistory;
+window.showCustomerHistory = function(){
+ let cust = JSON.parse(localStorage.getItem('et_customer_login')||localStorage.getItem('et_customer_data')||'{}');
+ if(!cust.phone){ let el=document.getElementById('c_history'); if(el) el.innerHTML="Login karo - Phone dal ke Login dabao"; return; }
+ let all = JSON.parse(localStorage.getItem('et_book')||'[]');
+ let my = all.filter(b=>String(b.phone)==String(cust.phone));
+ let histEl = document.getElementById('c_history');
+ if(histEl){
+   if(!my.length) histEl.innerHTML = `Phone ${cust.phone} ki koi booking nahi - Firebase se laa rahe hai...`;
+   else {
+     histEl.innerHTML = my.slice(-10).reverse().map(b=>{
+       if(b.status=='completed') return `<div style="background:#dcfce7;padding:6px;border-radius:6px;margin:3px 0">✅ ${b.fromName||b.from}→${b.toName||b.to} ${b.price} ${b.completedTime||''}</div>`;
+       return `<div style="background:#dbeafe;padding:6px;border-radius:6px;margin:3px 0">🔵 ${b.fromName||b.from}→${b.toName||b.to} ${b.status} OTP:${b.otp} ${b.driverName||''} <button onclick="showBlueDriverLive(${b.fromLat},${b.fromLng},${b.toLat},${b.toLng})" style="font-size:10px">Blue</button></div>`;
+     }).join('');
+   }
+ }
+};
+
+setTimeout(()=>{try{if(window.map) map.invalidateSize(); if(window.map2) map2.invalidateSize(); if(window.c_live_map) c_live_map.invalidateSize();}catch(e){} console.log("PATCH V3 DONE");},1000);
 </script>
-<!-- ===== PATCH V2 KHATAM ===== -->
+<!-- PATCH V3 END -->
 </body>
 </html>
