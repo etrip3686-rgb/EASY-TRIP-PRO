@@ -560,6 +560,117 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
     });
   }
 })();
+ // ================= FIX 1: BLUE LINE SYSTEM =================
+let routeLine = null;
+let driverMarker = null;
+
+async function showRoute(lat1, lon1, lat2, lon2){
+  try{
+    if(routeLine){ map.removeLayer(routeLine); }
+    if(driverMarker){ map.removeLayer(driverMarker); }
+
+    // Pehle dotted line turant dikhao
+    routeLine = L.polyline([[lat1, lon1],[lat2, lon2]], {color:'blue', weight:5, dashArray:'10,10', opacity:0.7}).addTo(map);
+    map.fitBounds(routeLine.getBounds(), {padding:[50,50]});
+
+    // Fir OSRM se asli road wali blue line lo
+    let url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson`;
+    let res = await fetch(url);
+    let data = await res.json();
+    if(data.routes && data.routes[0]){
+      let coords = data.routes[0].geometry.coordinates.map(c=>[c[1], c[0]]);
+      map.removeLayer(routeLine);
+      routeLine = L.polyline(coords, {color:'#0b5bff', weight:6, opacity:0.9}).addTo(map);
+    }
+  }catch(e){
+    console.log("Route error", e);
+  }
+}
+
+function calcKM(){
+  if(!fromLatLng||!toLatLng)return;
+  let R=6371,dLat=(toLatLng.lat-fromLatLng.lat)*Math.PI/180,dLon=(toLatLng.lng-fromLatLng.lng)*Math.PI/180;
+  let a=Math.sin(dLat/2)**2+Math.cos(fromLatLng.lat*Math.PI/180)*Math.cos(toLatLng.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  let km=R*c;
+  document.getElementById('c_km').value=km.toFixed(2);
+  let sel=document.getElementById('c_veh').value;
+  let veh=CFG.vehicles.find(v=>sel.includes(v.name)||v.name==sel);
+  let rate=veh?veh.rate:15;
+  document.getElementById('c_price').innerText="₹"+(km*rate+50).toFixed(0);
+  // BLUE LINE: Customer Mode me From->To blue line
+  try{ showRoute(fromLatLng.lat,fromLatLng.lng,toLatLng.lat,toLatLng.lng); }catch(e){}
+}
+
+// ================= FIX 2: DRIVER ACCEPT + OTP + COMPLETE LOGIC =================
+// Ye galat logic ko sahi karega
+
+// Driver jab booking accept karega
+function driverAcceptBooking(bookingId){
+  let b = allBookings.find(x=>x.id==bookingId);
+  if(!b) return;
+  b.status = "accepted";
+  b.driverLat = currentDriverLat || 26.1445; // driver ki current location
+  b.driverLng = currentDriverLng || 91.7362;
+  b.driverInfo = {name: "Driver", phone: "98xxxxxx10", vehicle: "Swift DZire", number: "AS01-1234"};
+
+  alert("Booking Accepted!");
+
+  // CUSTOMER KO DIKHEGA: Driver details + Driver ka location + Blue line Driver->Customer
+  if(typeof showCustomerWaitingScreen === 'function') showCustomerWaitingScreen(b);
+
+  // Map pe Driver se Customer tak blue line
+  showRoute(b.driverLat, b.driverLng, b.fromLat, b.fromLng);
+
+  // Driver ka blue dot
+  if(driverMarker) map.removeLayer(driverMarker);
+  driverMarker = L.marker([b.driverLat, b.driverLng], {icon: L.divIcon({html:'🔵', className:'driver-dot'})}).addTo(map);
+
+  // Customer ko driver info bhejo
+  try{ updateBookingInFirebase(b); }catch(e){}
+}
+
+// Customer ke paas pahuchne par OTP verify
+function verifyPickupOTP(enteredOtp, bookingId){
+  let b = allBookings.find(x=>x.id==bookingId);
+  if(enteredOtp == b.otp){
+    b.status = "on_trip";
+    alert("OTP Sahi hai! Trip Start ho gaya!");
+
+    // Ab Driver ko dikhega: Customer Location se Drop Location tak BLUE LINE
+    showRoute(b.fromLat, b.fromLng, b.toLat, b.toLng);
+
+    // Ab complete button tab tak disable rahega jab tak dropping point pe nahi pahuche
+    document.getElementById('otpSection').style.display='none';
+    document.getElementById('tripOnGoingSection').style.display='block';
+
+    try{ updateBookingInFirebase(b); }catch(e){}
+  } else {
+    alert("Galat OTP! Customer se sahi OTP pucho");
+  }
+}
+
+// Driver jab dropping point pe pahuchega tabhi complete hoga
+function completeTrip(bookingId){
+  let b = allBookings.find(x=>x.id==bookingId);
+  // Check karo driver dropping point pe hai ya nahi (100 meter ke andar)
+  let dist = getDistance(driverLat, driverLng, b.toLat, b.toLng);
+  if(dist > 0.1){ // 0.1km = 100 meter
+    alert("Aap abhi dropping point pe nahi pahuche! Pehle customer ko drop location pe le jao, tabhi Complete hoga. Blue line follow karo!");
+    return; // Complete nahi hoga
+  }
+
+  b.status = "completed";
+  alert("Trip Completed! Dropping point pe pahuch gaye!");
+  try{ updateBookingInFirebase(b); }catch(e){}
+  location.reload();
+}
+
+function getDistance(lat1, lon1, lat2, lon2){
+  let R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  let a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 </script>
 <!-- FIREBASE CODE KHATAM -->
 </body>
