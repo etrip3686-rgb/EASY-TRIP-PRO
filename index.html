@@ -774,13 +774,35 @@ if(navigator.geolocation){
  navigator.geolocation.watchPosition(p=>{driverLive={lat:p.coords.latitude,lng:p.coords.longitude};localStorage.setItem('et_driver_live',JSON.stringify(driverLive));},e=>{}, {enableHighAccuracy:true});
 }
 function genOTP(){return Math.floor(1000+Math.random()*9000).toString();}
-function checkLogin(){let ph=localStorage.getItem('et_customer_logged');if(!ph){document.getElementById('authModal').style.display='flex';}else{let d=JSON.parse(localStorage.getItem('et_customer_data')||'{}');document.getElementById('authModal').style.display='none';document.getElementById('topBarCust').style.display='flex';document.getElementById('cNameShow').innerText='👤 '+d.name+' | '+d.phone;}}
+function checkLogin(){
+ let cur = localStorage.getItem('et_current_page') || 'customer';
+ if(cur!='customer'){
+   document.getElementById('authModal').style.display='none';
+   document.getElementById('topBarCust').style.display='none';
+   return;
+ }
+ let ph=localStorage.getItem('et_customer_logged');
+ if(!ph){
+   document.getElementById('authModal').style.display='flex';
+   if(!document.getElementById('driverJump')){
+     let btn=document.createElement('div');
+     btn.id='driverJump';
+     btn.innerHTML='<button onclick="localStorage.setItem(\'et_current_page\',\'driver\');document.getElementById(\'authModal\').style.display=\'none\';showP(\'driver\');" style="margin-top:10px;width:100%;background:#0f172a;color:#ffcc00;padding:12px;border:none;border-radius:8px;font-weight:bold;">🚗 Driver Login? Yahan Click Karo</button><button onclick="localStorage.setItem(\'et_current_page\',\'admin\');document.getElementById(\'authModal\').style.display=\'none\';alert(\'Admin ke liye Logo 5 baar click karo\');" style="margin-top:6px;width:100%;background:#eee;padding:8px;border:none;border-radius:8px;">⚙️ Admin?</button>';
+     document.getElementById('lBox').appendChild(btn);
+   }
+ }else{
+   let d=JSON.parse(localStorage.getItem('et_customer_data')||'{}');
+   document.getElementById('authModal').style.display='none';
+   document.getElementById('topBarCust').style.display='flex';
+   document.getElementById('cNameShow').innerText='👤 '+d.name+' | '+d.phone;
+ }
+}
 function showLogin(){lBox.style.display='block';rBox.style.display='none';fBox.style.display='none';}
 function showReg(){lBox.style.display='none';rBox.style.display='block';fBox.style.display='none';}
 function showForgot(){lBox.style.display='none';rBox.style.display='none';fBox.style.display='block';}
 function sendOTP(t){
  let ph=t=='reg'?rPhone.value:t=='login'?lPhone.value:fPhone.value;
- if(ph.length!=10){alert('10 digit dalo');return;}
+ if(ph.length!=10){alert('10 digit');return;}
  if(t!='reg'){let a=JSON.parse(localStorage.getItem('et_all_cust')||'[]');if(!a.find(x=>x.phone==ph)){alert('Pehle Register karo');showReg();return;}}
  tempOTP=genOTP();tempPhone=ph;alert('🔵 OTP: '+tempOTP);if(t=='forgot'){fOtp.style.display='block';fBtn.style.display='block';}
 }
@@ -788,6 +810,8 @@ function doReg(){if(rOtp.value!=tempOTP||rPhone.value!=tempPhone){alert('OTP gal
 function doLogin(){if(lOtp.value!=tempOTP||lPhone.value!=tempPhone){alert('OTP galat');return;}let a=JSON.parse(localStorage.getItem('et_all_cust')||'[]');let f=a.find(x=>x.phone==lPhone.value);localStorage.setItem('et_customer_data',JSON.stringify(f));localStorage.setItem('et_customer_logged',f.phone);location.reload();}
 function doForgot(){if(fOtp.value!=tempOTP||fPhone.value!=tempPhone){alert('OTP galat');return;}let a=JSON.parse(localStorage.getItem('et_all_cust')||'[]');let f=a.find(x=>x.phone==fPhone.value);localStorage.setItem('et_customer_data',JSON.stringify(f));localStorage.setItem('et_customer_logged',f.phone);location.reload();}
 function doLogout(){localStorage.removeItem('et_customer_logged');localStorage.removeItem('et_customer_data');location.reload();}
+let oldShowP=window.showP;
+window.showP=function(p){localStorage.setItem('et_current_page',p);if(p=='customer') checkLogin(); else {document.getElementById('authModal').style.display='none';document.getElementById('topBarCust').style.display='none';} if(oldShowP) oldShowP(p);};
 // BLUE LINE LIVE
 window.showBlueLive=function(f1,f2,t1,t2){
  try{if(window._bl) map.removeLayer(window._bl);}catch(e){}
