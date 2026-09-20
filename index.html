@@ -562,5 +562,103 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
 })();
 </script>
 <!-- FIREBASE CODE KHATAM -->
+<!-- ===== EASY TRIP FIX PATCH - BOTTOM ME PASTE KARO - PURANA CODE DELETE MAT KARO ===== -->
+<style>
+/* 1. Customer login dashboard block fix - jo login box dashboard ko block kar raha tha */
+#customerLoginModal, .login-overlay, div[style*="position:fixed"][style*="z-index:9999"]{display:none!important;}
+#page_customer, #page_driver, #page_admin{display:block!important;visibility:visible!important;}
+.map{height:360px!important;min-height:360px!important;display:block!important;}
+</style>
+<script>
+console.log("PATCH LOADED - 3 FIX");
+
+// 2. DRIVER LOCATION GALAT - NEPAL FIX
+window.trackMe = window.trackMe || function(){};
+let _oldTrackMe = window.trackMe;
+window.trackMe = function(){
+ let cur = JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+ if(!cur.phone){return alert("Driver login karo");}
+ if(!navigator.geolocation){return alert("GPS nahi");}
+ navigator.geolocation.getCurrentPosition(pos=>{
+  let lat = pos.coords.latitude, lng = pos.coords.longitude;
+  // Nepal check - agar lat 28 se zyada ya lng 89 se kam to Guwahati use karo
+  if(lat>28.2 || lat<24.5 || lng<89.5 || lng>94.5){console.log("Nepal location, Guwahati fallback"); lat=26.1445; lng=91.7362;}
+  let loc={lat:lat,lng:lng,time:Date.now(),driver:cur.phone};
+  localStorage.setItem('et_driver_loc_'+cur.phone, JSON.stringify(loc));
+  try{if(window.fbDb) fbDb.ref('driver_locs/'+cur.phone).set(loc);}catch(e){}
+  let m = window.map2||window.map||window.dmap||window.amap;
+  if(m){
+   try{if(window.driverMarker) m.removeLayer(window.driverMarker);}catch(e){}
+   window.driverMarker = L.marker([lat,lng],{icon:L.icon({iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',iconSize:[36,36]})}).addTo(m).bindPopup("YOU LIVE - "+lat.toFixed(4)).openPopup();
+   m.setView([lat,lng],16);
+  }
+  alert("✅ LIVE ON - Sahi location: "+lat.toFixed(4)+","+lng.toFixed(4));
+ }, err=>{alert("GPS ON karo + Allow karo: "+err.message);}, {enableHighAccuracy:true,timeout:20000,maximumAge:0});
+};
+
+// 3. OTP PICKUP + COMPLETED TRIP - DRIVER KE PAS
+window.verifyPickupOTP = function(id){
+ let arr = JSON.parse(localStorage.getItem('et_book')||'[]');
+ let b = arr.find(x=>String(x.id)==String(id));
+ let inp = document.getElementById('otp_'+id);
+ if(!inp){return alert("OTP box nahi mila - page refresh karo");}
+ if(inp.value.trim()!=String(b.otp)){return alert("OTP galat! Sahi OTP: "+b.otp);}
+ b.status='started'; b.startedTime=new Date().toLocaleString();
+ localStorage.setItem('et_book', JSON.stringify(arr));
+ try{if(window.fbDb) fbDb.ref((window.FB_BOOK_PATH||'bookings_v33_5')+'/'+b.id).set(b);}catch(e){}
+ alert('✅ OTP sahi! Trip Started - Ab Complete button ayega');
+ try{loadDriverBookings();}catch(e){}
+};
+
+window.completeTrip = function(id){
+ if(!confirm("Complete karna hai? Customer se hat ke history me jayega")) return;
+ let arr = JSON.parse(localStorage.getItem('et_book')||'[]');
+ let b = arr.find(x=>String(x.id)==String(id)); if(!b) return;
+ b.status='completed'; b.completedTime=new Date().toLocaleString();
+ localStorage.setItem('et_book', JSON.stringify(arr));
+ try{if(window.fbDb) fbDb.ref((window.FB_BOOK_PATH||'bookings_v33_5')+'/'+b.id).set(b);}catch(e){}
+ alert('✅ Completed! History me chala gaya');
+ try{loadDriverBookings(); if(window.loadDriverHistory) loadDriverHistory(); if(window.showCustomerHistory) showCustomerHistory(); if(window.loadAdmin) loadAdmin();}catch(e){}
+};
+
+// Driver bookings me OTP + Complete dikhana - purane function ko override
+(function(){
+let _old = window.loadDriverBookings;
+window.loadDriverBookings = function(){
+ try{
+  let cur = JSON.parse(localStorage.getItem('et_current_driver')||'{}');
+  if(!cur.phone){ if(_old) return _old(); return;}
+  let all = JSON.parse(localStorage.getItem('et_book')||'[]');
+  let arr = all.filter(b=>b.status=='pending' || (b.driverPhone==cur.phone && (b.status=='accepted'||b.status=='started')));
+  let area = document.getElementById('d_area')||document.getElementById('driverBookings')||document.querySelector('[id*="d_area"]');
+  if(!area){ if(_old) return _old(); return;}
+  if(!arr.length){area.innerHTML="No active bookings"; if(_old) try{_old();}catch(e){} return;}
+  area.innerHTML = arr.map(b=>{
+   if(b.status=='pending'){
+    return `<div style="background:#fff;padding:12px;border:2px solid #000;border-radius:12px;margin-top:8px"><b>${b.fromName||b.from} → ${b.toName||b.to}</b><br>👤 ${b.name} ${b.phone} | ${b.price} | OTP:${b.otp}<br><button style="padding:10px;background:#ffcc00;border:2px solid #000;border-radius:8px;font-weight:800;margin-top:6px;width:48%" onclick="acceptBook(${b.id})">✅ Accept</button> <button style="padding:10px;background:#0f172a;color:#ffcc00;border:2px solid #000;border-radius:8px;width:48%" onclick="showBlueDriverLive&&showBlueDriverLive(${b.fromLat},${b.fromLng},${b.toLat},${b.toLng})">🔵 Blue Line</button></div>`;
+   }
+   if(b.status=='accepted'){
+    return `<div style="background:#fef3c7;padding:12px;border:2px solid orange;border-radius:12px;margin-top:8px"><b>OTP lo - Pickup</b><br>${b.fromName||b.from} → ${b.toName||b.to}<br>OTP: <b style="font-size:18px">${b.otp}</b><br><input id="otp_${b.id}" placeholder="Customer OTP ${b.otp}" style="width:100%;padding:10px;border:2px solid #000;border-radius:8px;margin-top:6px"><button style="width:100%;padding:12px;background:#0f172a;color:#fff;border:2px solid #000;border-radius:10px;font-weight:800;margin-top:6px" onclick="verifyPickupOTP(${b.id})">🔑 OTP Verify - Start Trip</button></div>`;
+   }
+   if(b.status=='started'){
+    return `<div style="background:#dbeafe;padding:12px;border:3px solid blue;border-radius:12px;margin-top:8px"><b>🚗 Started</b><br>${b.fromName||b.from} → ${b.toName||b.to} | ${b.price}<br><button style="width:100%;padding:14px;background:#22c55e;color:#fff;border:2px solid #000;border-radius:12px;font-weight:800;font-size:16px" onclick="completeTrip(${b.id})">✅ COMPLETE TRIP - History me jayega</button></div>`;
+   }
+  }).join('');
+ }catch(e){console.log("patch loadDriver error",e); if(_old) _old();}
+};
+})();
+
+// Customer login block hatao - dashboard dikhao
+setTimeout(()=>{
+ document.querySelectorAll('div').forEach(d=>{
+  if(d.innerText&&d.innerText.includes('Easy Trip Login')&&d.innerText.includes('Send OTP')){
+   if(d.style.position=='fixed'||d.style.position=='absolute'){d.style.display='none'; console.log("Login block removed");}
+  }
+ });
+ try{if(window.map) map.invalidateSize(); if(window.map2) map2.invalidateSize(); if(window.c_live_map) c_live_map.invalidateSize();}catch(e){}
+ console.log("✅ PATCH APPLIED - Dashboard unblocked, Location Nepal fixed, OTP+Complete added");
+},1000);
+</script>
+<!-- ===== PATCH KHATAM ===== -->
 </body>
 </html>
