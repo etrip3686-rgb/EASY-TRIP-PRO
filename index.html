@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Easy Trip - Final Fixed</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{background:#f0f2f5;padding-top:0}
+.inp{width:100%;padding:12px;border:2px solid #000;border-radius:10px;margin:6px 0;font-size:15px}
+.btn{width:100%;padding:12px;border:2px solid #000;border-radius:10px;font-weight:700;cursor:pointer;margin:6px 0}
+.btn-b{background:#0b5bff;color:#fff}.btn-y{background:#ffeb3b;color:#000}.btn-g{background:#22c55e;color:#fff}
+.hidden{display:none!important}
+.topbar{position:fixed;top:0;left:0;right:0;background:#000;color:#fff;padding:10px;display:flex;justify-content:space-between;z-index:9999}
+.page{padding:12px;max-width:500px;margin:0 auto}
+.card{background:#fff;border:2px solid #000;border-radius:16px;padding:12px;margin-top:12px}
+.map{height:280px;border:2px solid #000;border-radius:12px;margin-top:8px}
+.sug{position:absolute;z-index:999;background:#fff;border:2px solid #000;border-radius:10px;width:100%;max-height:180px;overflow:auto}
+.sug div{padding:10px;border-bottom:1px solid #ddd;cursor:pointer}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #000;display:flex;justify-content:space-around;padding:8px 0;z-index:999}
+.nav b{cursor:pointer;padding:6px 12px;border-radius:20px}
+.nav b.active{background:#000;color:#fff}
+</style>
+</head>
+<body>
+<div id="topBarCust" class="topbar" style="display:none"><span id="cNameShow">👤 Customer</span><span onclick="doLogout()" style="cursor:pointer;background:#ff4444;padding:4px 10px;border-radius:20px">Logout</span></div>
+
+<div id="custLoginModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:15px">
+<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:380px;border:3px solid #000">
+<h2 style="text-align:center">🚕 Easy Trip Login</h2>
+<div id="lBox">
+<input id="lPhone" class="inp" placeholder="Phone 10 digit"><input id="lOtp" class="inp" placeholder="OTP">
+<button class="btn btn-b" onclick="sendOTP('login')">📲 Send OTP</button>
+<button class="btn btn-y" onclick="doLogin()">✅ Login</button>
+<p style="text-align:center;margin-top:10px"><span onclick="showReg()" style="color:blue;text-decoration:underline;cursor:pointer">New? Register</span> | <span onclick="showForgot()" style="color:blue;text-decoration:underline;cursor:pointer">Forgot?</span></p>
+</div>
+<div id="rBox" style="display:none">
+<input id="rName" class="inp" placeholder="Full Name"><input id="rPhone" class="inp" placeholder="Phone 10 digit"><input id="rAddr" class="inp" placeholder="Address"><input id="rOtp" class="inp" placeholder="OTP">
+<button class="btn btn-b" onclick="sendOTP('reg')">📲 Send OTP</button>
+<button class="btn btn-y" onclick="doReg()">✅ Register</button>
+<p style="text-align:center;margin-top:10px"><span onclick="showLogin()" style="color:blue;text-decoration:underline;cursor:pointer">Already have? Login</span></p>
+</div>
+<div id="fBox" style="display:none">
+<input id="fPhone" class="inp" placeholder="Phone 10 digit"><input id="fOtp" class="inp" placeholder="OTP" style="display:none">
+<button class="btn btn-b" onclick="sendOTP('forgot')">📲 Send OTP</button>
+<button id="fBtn" class="btn btn-y" style="display:none" onclick="doForgot()">✅ Verify</button>
+<p style="text-align:center;margin-top:10px"><span onclick="showLogin()" style="color:blue;text-decoration:underline;cursor:pointer">Back to Login</span></p>
+</div>
+</div>
+</div>
+
+<div id="page_customer" class="page">
+<div class="card"><h3>📍 Book Your Ride</h3>
+<div style="position:relative"><input id="c_from" class="inp" placeholder="From - Pickup location" autocomplete="off"><div id="c_from_sug" class="sug hidden"></div></div>
+<div style="position:relative"><input id="c_to" class="inp" placeholder="To - Drop location" autocomplete="off"><div id="c_to_sug" class="sug hidden"></div></div>
+<div id="c_map" class="map"></div>
+<div style="display:flex;gap:8px;margin-top:8px"><input id="c_km" class="inp" placeholder="KM" readonly><div id="c_price" style="flex:1;background:#000;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800">₹0</div></div>
+<select id="c_veh" class="inp"></select>
+<input id="c_name" class="inp" placeholder="Your Name"><input id="c_phone" class="inp" placeholder="Your Phone">
+<button class="btn btn-b" onclick="book()">🚕 Book Now</button>
+<div id="c_msg" style="margin-top:8px"></div>
+<div id="c_otp_show" class="hidden card" style="background:#fef3c7"></div>
+<div id="c_live_section" class="hidden card" style="border:2px solid #0b5bff">
+<h4>🔵 LIVE Driver Tracking</h4>
+<div id="c_live_map" class="map" style="height:250px"></div>
+<div id="c_live_info" style="margin-top:8px;background:#dbeafe;padding:8px;border-radius:8px"></div>
+</div>
+<div class="card"><h4>📜 Your Trip History (Completed)</h4><div id="c_history">No history</div></div>
+</div>
+</div><div id="page_driver" class="page hidden">
+<div id="d_auth" class="card">
+<h3>🚗 Driver Panel</h3>
+<div id="d_reg_box">
+<input id="d_name" class="inp" placeholder="Name"><input id="d_phone" class="inp" placeholder="Phone 10 digit">
+<input id="d_pass" class="inp" placeholder="Password" type="password">
+<input id="d_vehno" class="inp" placeholder="Vehicle Number - AS01 AB 1234">
+<select id="d_vtype" class="inp"><option>Auto</option><option>Mini</option><option>Sedan</option><option>SUV</option><option>Bike</option></select>
+<button class="btn btn-y" onclick="regDriver()">📝 Register Driver</button>
+</div>
+<hr style="margin:12px 0">
+<input id="d_login_phone" class="inp" placeholder="Login Phone"><input id="d_login_pass" class="inp" placeholder="Password" type="password">
+<button class="btn btn-b" onclick="loginDriver()">🔑 Login</button>
+</div>
+
+<div id="d_dash" class="hidden">
+<div id="d_status" class="card"></div>
+<div class="card">
+<button class="btn btn-g" onclick="trackMe()">📍 LIVE ON - Location Sahi Dikhane Ke Liye</button>
+<div id="d_map" class="map"></div>
+<small style="color:red">⚠️ LIVE ON dabane ke baad aapka sahi location customer ko blue line pe dikhega, Nepal nahi ayega!</small>
+</div>
+<div class="card">
+<h3>📦 Active Bookings - OTP Lena Hai</h3>
+<div id="d_area">No bookings</div>
+</div>
+<div class="card">
+<h3>✅ Aapke Completed Trips History</h3>
+<div id="d_history">No completed trips</div>
+</div>
+<button class="btn" style="background:#ff4444;color:#fff" onclick="logoutDriver()">Logout</button>
+</div>
+</div>
+
+<div id="page_admin" class="page hidden">
+<div id="adminLogin" class="card">
+<h3>🔐 Admin Login</h3>
+<input id="a_user" class="inp" placeholder="Username"><input id="a_pass" class="inp" placeholder="Password" type="password">
+<button class="btn btn-b" onclick="adminLogin()">Login Admin</button>
+</div>
+
+<div id="adminArea" class="hidden">
+<div class="card" style="border:3px solid #000">
+<h3>⚙️ FULL ADMIN CONTROL - Edit Sab Kuch</h3>
+
+<h4>💰 Vehicle Rate Per KM Edit</h4>
+<div id="adminVehEdit"></div>
+<button class="btn btn-b" onclick="saveVehRates()">💾 Save Vehicle Rates</button>
+
+<h4 style="margin-top:15px">🚗 Driver Payable Settings</h4>
+<label>Daily Payable (₹)</label><input id="a_daily" class="inp" value="500">
+<label>Monthly Payable (₹)</label><input id="a_monthly" class="inp" value="15000">
+<label>Commission %</label><input id="a_comm" class="inp" value="20">
+<button class="btn btn-y" onclick="saveDriverPayable()">💾 Save Driver Payable</button>
+
+<h4 style="margin-top:15px">📱 QR Code Edit (Payment)</h4>
+<input id="a_qr_text" class="inp" placeholder="UPI ID ya Text"><input id="a_qr_url" class="inp" placeholder="QR Image URL">
+<div id="a_qr_preview" style="text-align:center;margin:10px 0"></div>
+<div style="display:flex;gap:6px"><button class="btn btn-b" onclick="saveQR()">💾 Save QR</button><button class="btn btn-y" onclick="previewQR()">👁️ Preview</button></div>
+
+<h4 style="margin-top:15px">💵 Base Fare + Extra</h4>
+<input id="a_base" class="inp" value="50" placeholder="Base Fare ₹"><button class="btn btn-b" onclick="saveBasePrice()">💾 Save Base Price</button>
+
+<h4 style="margin-top:15px">📊 Excel Download - Full Data</h4>
+<button class="btn btn-b" onclick="downloadExcel('bookings')">📥 Bookings Excel</button>
+<button class="btn btn-y" onclick="downloadExcel('drivers')">📥 Drivers Excel</button>
+<button class="btn btn-b" onclick="downloadExcel('customers')">📥 Customers Excel</button>
+<button class="btn" style="background:#22c55e;color:#fff" onclick="downloadExcel('all')">📥 ALL Data Excel (4 Sheets)</button>
+</div>
+
+<div class="card"><h3>📋 Live Bookings - Admin View</h3><div id="adminBookings">No bookings</div></div>
+<div class="card"><h3>✅ Completed History - Admin</h3><div id="adminHistory">No history</div></div>
+<div class="card"><h3>🚗 Vehicles + Commission Details</h3><div id="adminVehList"></div>
+<div id="adminDriversList" style="margin-top:10px"></div>
+</div>
+</div>
+</div>
+
+<div class="nav"><b id="nav_c" class="active" onclick="showPage('customer')">Customer</b><b id="nav_d" onclick="showPage('driver')">Driver</b><b id="nav_a" onclick="showPage('admin')">Admin</b></div><script>
+let map,map2,map3,c_live_map,fromLatLng=null,toLatLng=null,fromName="",toName="",driverMarker=null,watchId=null;
+let CFG={vehicles:[{name:"Auto",rate:12},{name:"Mini",rate:15},{name:"Sedan",rate:18},{name:"SUV",rate:22},{name:"Bike",rate:8}],adminCred:{user:"admin",pass:"admin123"}};
+
+function getTileLayer(){return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19});}
+function initMaps(){
+map=L.map('c_map').setView([26.1445,91.7362],12);getTileLayer().addTo(map);
+map2=L.map('d_map').setView([26.1445,91.7362],12);getTileLayer().addTo(map2);
+c_live_map=L.map('c_live_map').setView([26.1445,91.7362],12);getTileLayer().addTo(c_live_map);
+try{map3=L.map('a_map').setView([26.1445,91.7362],12);getTileLayer().addTo(map3);}catch(e){}
+
+map.on('click',e=>{fromLatLng=e.latlng;fromName=`${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;document.getElementById('c_from').value=fromName;calcKM();});
+let savedV=localStorage.getItem('et_vehicles');if(savedV){try{CFG.vehicles=JSON.parse(savedV);}catch(e){}}
+refreshVeh();
+setupSearch('c_from','c_from_sug',true);
+setupSearch('c_to','c_to_sug',false);
+}
+function refreshVeh(){
+let sel=document.getElementById('c_veh');if(!sel)return;
+sel.innerHTML=CFG.vehicles.map(v=>`<option>${v.name} - ₹${v.rate}/km</option>`).join('');
+let list=document.getElementById('adminVehList');if(list) list.innerHTML=CFG.vehicles.map(v=>`<div style="border:1px solid #000;padding:6px;border-radius:8px;margin-top:4px">${v.name} : ₹${v.rate}/km | Commission: ${localStorage.getItem('et_commission')||'20'}%</div>`).join('');
+}
+function setupSearch(inpId,sugId,isFrom){
+let inp=document.getElementById(inpId);let sug=document.getElementById(sugId);
+inp.addEventListener('input',()=>{
+let q=inp.value.trim();if(q.length<3){sug.classList.add('hidden');return;}
+fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`).then(r=>r.json()).then(arr=>{
+sug.innerHTML=arr.map(a=>`<div onclick="selectPlace('${inpId}','${sugId}',${a.lat},${a.lon},'${a.display_name.replace(/'/g,"")}')">${a.display_name.substring(0,60)}</div>`).join('');sug.classList.remove('hidden');
+});
+});
+}
+window.selectPlace=function(inpId,sugId,lat,lon,name){
+document.getElementById(inpId).value=name;
+document.getElementById(sugId).classList.add('hidden');
+if(inpId=='c_from'){fromLatLng={lat:parseFloat(lat),lng:parseFloat(lon)};fromName=name;}
+else{toLatLng={lat:parseFloat(lat),lng:parseFloat(lon)};toName=name;}
+calcKM();
+}
+function calcKM(){
+if(!fromLatLng||!toLatLng)return;
+let R=6371,dLat=(toLatLng.lat-fromLatLng.lat)*Math.PI/180,dLon=(toLatLng.lng-fromLatLng.lng)*Math.PI/180;
+let a=Math.sin(dLat/2)**2+Math.cos(fromLatLng.lat*Math.PI/180)*Math.cos(toLatLng.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));let km=R*c;
+document.getElementById('c_km').value=km.toFixed(2);
+let sel=document.getElementById('c_veh').value;let veh=CFG.vehicles.find(v=>sel.includes(v.name)||v.name==sel);let rate=veh?veh.rate:15;
+let base=parseFloat(localStorage.getItem('et_base_fare')||'50');
+document.getElementById('c_price').innerText="₹"+(km*rate+base).toFixed(0);
+}
+function showPage(p){
+document.getElementById('page_customer').classList.add('hidden');
+document.getElementById('page_driver').classList.add('hidden');
+document.getElementById('page_admin').classList.add('hidden');
+document.getElementById('nav_c').classList.remove('active');document.getElementById('nav_d').classList.remove('active');document.getElementById('nav_a').classList.remove('active');
+document.getElementById('page_'+p).classList.remove('hidden');
+document.getElementById('nav_'+p[0]).classList.add('active');
+localStorage.setItem('et_current_page',p);
+setTimeout(()=>{map.invalidateSize();map2.invalidateSize();if(c_live_map)c_live_map.invalidateSize();},300);
+if(p=='driver')loadDriverBookings();
+if(p=='admin')loadAdmin();
+}
+
+// DRIVER FUNCTIONS - PURANA SAME + NAYA OTP + COMPLETE
+function regDriver(){
+let n=document.getElementById('d_name').value.trim();let ph=document.getElementById('d_phone').value.trim();
+let ps=document.getElementById('d_pass').value.trim();let vehno=document.getElementById('d_vehno').value.trim();
+if(!n||!ph||!ps||!vehno)return alert("All fields bharo");
+let d={id:Date.now(),name:n,phone:ph,pass:ps,vehno:vehno,vtype:document.getElementById('d_vtype').value,status:"approved",dailyPayable:localStorage.getItem('et_daily_payable')||'500',monthlyPayable:localStorage.getItem('et_monthly_payable')||'15000'};
+let arr=JSON.parse(localStorage.getItem('et_drivers')||'[]');arr.push(d);localStorage.setItem('et_drivers',JSON.stringify(arr));
+alert("✅ Driver Registered! Login karo");
+}
+function loginDriver(){
+let ph=document.getElementById('d_login_phone').value;let ps=document.getElementById('d_login_pass').value;
+let arr=JSON.parse(localStorage.getItem('et_drivers')||'[]');let f=arr.find(x=>x.phone==ph&&x.pass==ps);
+if(!f)return alert("Wrong phone/pass");
+localStorage.setItem('et_current_driver',JSON.stringify(f));
+document.getElementById('d_auth').classList.add('hidden');document.getElementById('d_dash').classList.remove('hidden');
+document.getElementById('d_status').innerHTML=`<div style="background:#dcfce7;padding:10px;border-radius:12px"><b>${f.name} | ${f.vehno} | ${f.vtype}</b><br><small>LIVE ON dabao taaki customer sahi location dekhe</small></div>`;
+loadDriverBookings();loadDriverHistory();
+}
+function logoutDriver(){if(watchId)navigator.geolocation.clearWatch(watchId);localStorage.removeItem('et_current_driver');document.getElementById('d_auth').classList.remove('hidden');document.getElementById('d_dash').classList.add('hidden');}<script>
+// ===== FINAL FIX - BLUE LINE + OTP + COMPLETE + HISTORY - PURANA CODE DELETE NAHI HUA =====
+let _blueLine=null, _c_blueLine=null, custLiveMarker=null;
+window.showBlueDriverLive=function(f1,f2,t1,t2){
+ try{let m=window.map2||window.map||window.dmap; if(_blueLine) m.removeLayer(_blueLine);}catch(e){}
+ try{
+  _blueLine=L.polyline([[f1,f2],[t1,t2]],{color:'blue',weight:7}).addTo(window.map2||window.map||window.dmap);
+  (window.map2||window.map||window.dmap).fitBounds(_blueLine.getBounds(),{padding:[30,30]});
+  fetch(`https://router.project-osrm.org/route/v1/driving/${f2},${f1};${t2},${t1}?overview=full&geometries=geojson`).then(r=>r.json()).then(d=>{
+   if(d.routes&&d.routes[0]){ try{(window.map2||window.map||window.dmap).removeLayer(_blueLine)}catch(e){}; _blueLine=L.geoJSON(d.routes[0].geometry,{style:{color:'#0b5bff',weight:7}}).addTo(window.map2||window.map||window.dmap); }
+  });
+  if(window.c_live_map){ try{if(_c_blueLine) c_live_map.removeLayer(_c_blueLine);}catch(e){}; _c_blueLine=L.polyline([[f1,f2],[t1,t2]],{color:'blue',weight:7,dashArray:'10,10'}).addTo(c_live_map); try{c_live_map.fitBounds(_c_blueLine.getBounds(),{padding:[20,20]});}catch(e){} }
+ }catch(e){}
+};
+window.verifyPickupOTP=function(id){
+ let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id)); if(!b) return alert("Booking nahi mila");
+ let inp=document.getElementById('otp_'+id); if(!inp) return alert("OTP box nahi mila");
+ if(inp.value.trim()!=String(b.otp)){ return alert("OTP galat! Sahi OTP: "+b.otp); }
+ b.status='started'; b.startedTime=new Date().toLocaleString();
+ localStorage.setItem('et_book',JSON.stringify(arr));
+ try{if(window.fbDb) window.fbDb.ref((window.FB_BOOK_PATH||'bookings_v33_5')+'/'+b.id).set(b);}catch(e){}
+ alert('✅ OTP sahi! Trip Started - Ab Drop tak jao'); try{loadDriverBookings();}catch(e){}
+};
+window.completeTrip=function(id){
+ if(!confirm("Trip complete? Customer portal se hat jayega, sirf history me rahega.")) return;
+ let arr=JSON.parse(localStorage.getItem('et_book')||'[]'); let b=arr.find(x=>String(x.id)==String(id)); if(!b) return;
+ b.status='completed'; b.completedTime=new Date().toLocaleString();
+ localStorage.setItem('et_book',JSON.stringify(arr));
+ try{if(window.fbDb) window.fbDb.ref((window.FB_BOOK_PATH||'bookings_v33_5')+'/'+b.id).set(b);}catch(e){}
+ alert('✅ Trip Completed! Admin ko pata chal gaya'); try{loadDriverBookings(); loadDriverHistory(); loadAdmin(); loadCustomerHistory();}catch(e){}
+};
+let _oldLoadDriverBookings2 = window.loadDriverBookings;
+window.loadDriverBookings=function(){
+ try{
+  let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}'); let all=JSON.parse(localStorage.getItem('et_book')||'[]');
+  let arr=all.filter(b=>b.status=='pending' || (b.driverPhone==cur.phone && (b.status=='accepted'||b.status=='started')));
+  if(arr.length==0 && _oldLoadDriverBookings2){ return _oldLoadDriverBookings2(); }
+  let html=arr.map(b=>{
+   if(b.status=='pending') return `<div style="background:#fff;padding:12px;border-radius:12px;margin-top:8px;border:2px solid #000"><b>${b.fromName||b.from}</b> → ${b.toName||b.to}<br>👤 ${b.name} | ${b.phone}<br>💰 ${b.price} | OTP:${b.otp}<br><button class="btn btn-y" onclick="acceptBook(${b.id})">✅ Accept</button><button class="btn btn-b" style="margin-top:6px" onclick="showBlueDriverLive(${b.fromLat},${b.fromLng},${b.toLat},${b.toLng})">🔵 Blue Line</button></div>`;
+   if(b.status=='accepted') return `<div style="background:#fef3c7;padding:12px;border-radius:12px;margin-top:8px;border:2px solid #f59e0b"><b>${b.fromName||b.from}</b> → ${b.toName||b.to}<br>👤 ${b.name} | ${b.phone} | OTP: <b>${b.otp}</b><br><input id="otp_${b.id}" placeholder="Customer OTP dalo" style="width:100%;padding:8px;margin:6px 0;border:2px solid #000;border-radius:8px"><button class="btn btn-b" onclick="verifyPickupOTP(${b.id})">🔢 OTP Verify - Trip Start</button></div>`;
+   if(b.status=='started') return `<div style="background:#dbeafe;padding:12px;border-radius:12px;margin-top:8px;border:2px solid #0b5bff"><b>🚗 Trip Started</b><br>${b.fromName||b.from} → ${b.toName||b.to}<br><button class="btn" style="background:#22c55e;color:#fff;border:2px solid #000" onclick="completeTrip(${b.id})">✅ Complete Trip</button></div>`;
+   return "";
+  }).join('');
+  let area=document.getElementById('d_area'); if(area) area.innerHTML=html||"No active bookings";
+ }catch(e){ if(_oldLoadDriverBookings2) _oldLoadDriverBookings2(); }
+};
+window.loadCustomerHistory=function(){
+ try{
+  let cust=JSON.parse(localStorage.getItem('et_customer_data')||'{}'); if(!cust.phone) return;
+  let all=JSON.parse(localStorage.getItem('et_book')||'[]'); let arr=all.filter(b=>(b.phone==cust.phone||b.customerLoggedPhone==cust.phone)&&b.status=='completed');
+  let h=document.getElementById('c_history'); if(h) h.innerHTML=arr.map(b=>`<div style="border:1px solid #000;padding:8px;border-radius:8px;margin-top:6px;background:#f3f4f6">✅ ${b.fromName||b.from} → ${b.toName||b.to} | ${b.price}</div>`).join('')||"No history";
+ }catch(e){}
+};
+window.loadDriverHistory=function(){
+ try{
+  let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}'); let all=JSON.parse(localStorage.getItem('et_book')||'[]'); let arr=all.filter(b=>b.driverPhone==cur.phone&&b.status=='completed');
+  let h=document.getElementById('d_history'); if(h) h.innerHTML=arr.map(b=>`<div style="border:1px solid #000;padding:8px;border-radius:8px;margin-top:6px;background:#f3f4f6">✅ ${b.fromName||b.from} → ${b.toName||b.to} | ${b.price}</div>`).join('')||"No completed";
+ }catch(e){}
+};
+if(window.fbDb){
+ try{
+  window.fbDb.ref('driver_locs').on('value',snap=>{
+   let locs=snap.val(); if(!locs) return;
+   let all=JSON.parse(localStorage.getItem('et_book')||'[]'); let cust=JSON.parse(localStorage.getItem('et_customer_data')||'{}');
+   let last=all.filter(b=>(b.phone==cust.phone||b.customerLoggedPhone==cust.phone)&&(b.status=='accepted'||b.status=='started')).pop();
+   if(!last||!last.driverPhone) return; let dloc=locs[last.driverPhone]; if(!dloc) return;
+   if(!window.c_live_map) return;
+   try{if(_c_blueLine) c_live_map.removeLayer(_c_blueLine);}catch(e){}
+   _c_blueLine=L.polyline([[dloc.lat,dloc.lng],[last.fromLat,last.fromLng]],{color:'blue',weight:7,dashArray:'10,10'}).addTo(c_live_map);
+   try{if(custLiveMarker) c_live_map.removeLayer(custLiveMarker);}catch(e){}
+   custLiveMarker=L.marker([dloc.lat,dloc.lng],{icon:L.icon({iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',iconSize:[32,32]})}).addTo(c_live_map).bindPopup("🚗 Driver LIVE").openPopup();
+   let info=document.getElementById('c_live_info'); if(info) info.innerHTML=`🚗 Driver LIVE<br>📍 Pickup: ${last.fromName||last.from}<br>📍 Drop: ${last.toName||last.to}<br>🔵 Blue Line<br>OTP: <b>${last.otp}</b> (Driver ko dena)`;
+  });
+ }catch(e){}
+}
+navigator.geolocation.watchPosition(p=>{
+ try{
+  let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}'); if(!cur.phone) return;
+  let loc={lat:p.coords.latitude,lng:p.coords.longitude,time:Date.now()};
+  localStorage.setItem('et_driver_loc_'+cur.phone,JSON.stringify(loc));
+  if(window.fbDb) window.fbDb.ref('driver_locs/'+cur.phone).set(loc);
+ }catch(e){}
+}, null, {enableHighAccuracy:true});
+</script><div class="card" style="border:3px solid #ffcc00;background:#fffbe6;margin-top:12px">
+<h3>⚙️ Admin Full Edit - Amount + Driver Payable + QR + Excel</h3>
+
+<h4>💰 Vehicle Rate Edit</h4>
+<div id="adminVehEditNew">Loading...</div>
+<button class="btn btn-b" onclick="saveVehRatesNew()">💾 Save Vehicle Rates</button>
+
+<h4>🚗 Driver Payable</h4>
+<input id="a_daily_new" class="inp" placeholder="Daily ₹500">
+<input id="a_monthly_new" class="inp" placeholder="Monthly ₹15000">
+<input id="a_comm_new" class="inp" placeholder="Commission % 20">
+<button class="btn btn-y" onclick="saveDriverPayableNew()">💾 Save Driver Payable</button>
+
+<h4>💵 Base Fare</h4>
+<input id="a_base_new" class="inp" placeholder="Base Fare ₹50">
+<button class="btn btn-b" onclick="saveBasePriceNew()">💾 Save Base Fare</button>
+
+<h4>📱 QR Edit</h4>
+<input id="a_qr_text_new" class="inp" placeholder="UPI ID">
+<input id="a_qr_url_new" class="inp" placeholder="QR Image URL https://...">
+<div id="a_qr_preview_new" style="text-align:center;margin:8px 0"></div>
+<button class="btn btn-b" onclick="saveQRNew()">💾 Save QR</button>
+
+<h4>📊 Excel Download</h4>
+<button class="btn btn-b" onclick="downloadExcelNew('bookings')">📥 Bookings</button>
+<button class="btn btn-y" onclick="downloadExcelNew('drivers')">📥 Drivers</button>
+<button class="btn" style="background:#22c55e;color:#fff" onclick="downloadExcelNew('all')">📥 ALL Data Excel</button>
+</div>
+
+<script>
+function loadAdminFullEdit(){
+ let vehs=JSON.parse(localStorage.getItem('et_vehicles')||'[]'); if(!vehs.length && window.CFG) vehs=CFG.vehicles||[];
+ let cont=document.getElementById('adminVehEditNew'); if(cont) cont.innerHTML=vehs.map((v,i)=>`<div style="display:flex;gap:6px;margin:6px 0"><span style="flex:1">${v.name}</span><input id="veh_rate_new_${i}" value="${v.rate||10}" style="width:80px;padding:6px;border:2px solid #000;border-radius:6px">₹/km</div>`).join('');
+ document.getElementById('a_daily_new').value=localStorage.getItem('et_daily_payable')||'500';
+ document.getElementById('a_monthly_new').value=localStorage.getItem('et_monthly_payable')||'15000';
+ document.getElementById('a_comm_new').value=localStorage.getItem('et_commission')||'20';
+ document.getElementById('a_base_new').value=localStorage.getItem('et_base_fare')||'50';
+ document.getElementById('a_qr_text_new').value=localStorage.getItem('et_qr_text')||'';
+ document.getElementById('a_qr_url_new').value=localStorage.getItem('et_qr_url')||'';
+}
+window.saveVehRatesNew=function(){ let vehs=JSON.parse(localStorage.getItem('et_vehicles')||'[]'); if(!vehs.length) vehs=CFG.vehicles; vehs.forEach((v,i)=>{let inp=document.getElementById('veh_rate_new_'+i); if(inp) v.rate=parseFloat(inp.value)||v.rate;}); localStorage.setItem('et_vehicles',JSON.stringify(vehs)); alert("✅ Vehicle rates saved"); };
+window.saveDriverPayableNew=function(){ localStorage.setItem('et_daily_payable',document.getElementById('a_daily_new').value); localStorage.setItem('et_monthly_payable',document.getElementById('a_monthly_new').value); localStorage.setItem('et_commission',document.getElementById('a_comm_new').value); alert("✅ Driver payable saved"); };
+window.saveBasePriceNew=function(){ localStorage.setItem('et_base_fare',document.getElementById('a_base_new').value); alert("✅ Base price saved"); };
+window.saveQRNew=function(){ localStorage.setItem('et_qr_text',document.getElementById('a_qr_text_new').value); localStorage.setItem('et_qr_url',document.getElementById('a_qr_url_new').value); alert("✅ QR saved"); };
+window.downloadExcelNew=function(type){
+ let bookings=JSON.parse(localStorage.getItem('et_book')||'[]'); let drivers=JSON.parse(localStorage.getItem('et_drivers')||'[]'); let data=type=='bookings'?bookings:type=='drivers'?drivers:[...bookings,...drivers];
+ if(!data.length) return alert("No data");
+ if(window.XLSX){ let ws=XLSX.utils.json_to_sheet(data); let wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,type); XLSX.writeFile(wb,`easy_trip_${type}.xlsx`); }
+ else{ let csv=Object.keys(data[0]).join(",")+"\n"+data.map(r=>Object.values(r).map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n"); let blob=new Blob([csv],{type:'text/csv'}); let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${type}.csv`; a.click(); }
+};
+let _oldAdmin=window.loadAdmin; window.loadAdmin=function(){ try{if(_oldAdmin) _oldAdmin();}catch(e){} loadAdminFullEdit(); };
+</script><div id="page_driver" class="page hidden">
+<div id="d_auth" class="card">
+<h3>🚗 Driver Login / Register</h3>
+<input id="d_name" class="inp" placeholder="Name">
+<input id="d_phone" class="inp" placeholder="Phone 10 digit">
+<input id="d_pass" class="inp" placeholder="Password" type="password">
+<input id="d_vehno" class="inp" placeholder="Vehicle No AS01 AB 1234">
+<select id="d_vtype" class="inp"><option>Auto</option><option>Mini</option><option>Sedan</option><option>SUV</option><option>Bike</option></select>
+<button class="btn btn-y" onclick="regDriver()">📝 Register</button>
+<hr style="margin:10px 0">
+<input id="d_login_phone" class="inp" placeholder="Login Phone"><input id="d_login_pass" class="inp" placeholder="Password" type="password">
+<button class="btn btn-b" onclick="loginDriver()">🔑 Login</button>
+</div>
+<div id="d_dash" class="hidden">
+<div id="d_status" class="card"></div>
+<div class="card">
+<button class="btn btn-g" onclick="trackMe()">📍 LIVE ON - Sahi Location</button>
+<div id="d_map" class="map"></div>
+<small style="color:red">LIVE ON dabane ke baad blue line customer ko dikhega, Nepal fix!</small>
+</div>
+<div class="card"><h3>📦 Active Bookings - OTP + Blue Line</h3><div id="d_area">No bookings</div></div>
+<div class="card"><h3>✅ Completed History - Driver</h3><div id="d_history">No completed</div></div>
+<button class="btn btn-r" onclick="logoutDriver()">Logout</button>
+</div>
+</div>
+
+<div id="page_admin" class="page hidden">
+<div id="adminLogin" class="card">
+<h3>🔐 Admin Login</h3>
+<input id="a_user" class="inp" placeholder="admin"><input id="a_pass" class="inp" placeholder="admin123" type="password">
+<button class="btn btn-b" onclick="adminLogin()">Login</button>
+</div>
+<div id="adminArea" class="hidden">
+<div class="card"><h3>📋 Live Bookings Admin</h3><div id="adminBookings">No bookings</div></div>
+<div class="card"><h3>✅ Completed History Admin</h3><div id="adminHistory">No history</div></div>
+<div class="card"><h3>🚗 Drivers List + Vehicles</h3><div id="adminDriversList"></div><div id="adminVehList" style="margin-top:8px"></div></div>
+
+<!-- ADMIN FULL EDIT SINGLE BLOCK - Amount + Daily/Monthly + QR + Excel -->
+<div class="card" style="border:3px solid #ffcc00;background:#fffbe6">
+<h3>⚙️ FULL EDIT - Amount, Driver Payable, QR, Excel</h3>
+<div id="adminVehEditNew"></div>
+<button class="btn btn-b" onclick="saveVehRatesNew()">💾 Save Vehicle Rates</button>
+<input id="a_daily_new" class="inp" placeholder="Daily ₹500"><input id="a_monthly_new" class="inp" placeholder="Monthly ₹15000">
+<input id="a_comm_new" class="inp" placeholder="Commission %"><button class="btn btn-y" onclick="saveDriverPayableNew()">💾 Save Payable</button>
+<input id="a_base_new" class="inp" placeholder="Base Fare ₹50"><button class="btn btn-b" onclick="saveBasePriceNew()">💾 Save Base</button>
+<input id="a_qr_text_new" class="inp" placeholder="UPI ID"><input id="a_qr_url_new" class="inp" placeholder="QR Image URL"><div id="a_qr_preview_new" style="text-align:center"></div>
+<button class="btn btn-b" onclick="saveQRNew()">💾 Save QR</button>
+<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-b" onclick="downloadExcelNew('bookings')">📥 Bookings</button><button class="btn btn-y" onclick="downloadExcelNew('drivers')">📥 Drivers</button><button class="btn" style="background:#22c55e;color:#fff" onclick="downloadExcelNew('all')">📥 ALL Excel</button></div>
+</div>
+</div>
+</div>
+
+<div class="nav"><b id="nav_c" class="active" onclick="showPage('customer')">Customer</b><b id="nav_d" onclick="showPage('driver')">Driver</b><b id="nav_a" onclick="showPage('admin')">Admin</b></div>
+
+<script>
+let map,map2,c_live_map,fromLatLng=null,toLatLng=null,fromName="",toName="",driverMarker=null;
+let CFG={vehicles:[{name:"Auto",rate:12},{name:"Mini",rate:15},{name:"Sedan",rate:18},{name:"SUV",rate:22},{name:"Bike",rate:8}]};
+const firebaseConfig={apiKey:"AIzaSyAl3Y4UJ9XdI3xBXNF6PuIAypz3PjYv1ng",authDomain:"easy-trip-d601a.firebaseapp.com",databaseURL:"https://easy-trip-d601a-default-rtdb.firebaseio.com",projectId:"easy-trip-d601a",storageBucket:"easy-trip-d601a.appspot.com",messagingSenderId:"123456789000",appId:"1:123456789000:web:abcdef123456"};
+try{firebase.initializeApp(firebaseConfig);window.fbDb=firebase.database();}catch(e){}
+function getTile(){return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19});}
+function init(){map=L.map('c_map').setView([26.1445,91.7362],12);getTile().addTo(map);map2=L.map('d_map').setView([26.1445,91.7362],12);getTile().addTo(map2);c_live_map=L.map('c_live_map').setView([26.1445,91.7362],12);getTile().addTo(c_live_map);let v=localStorage.getItem('et_vehicles');if(v)try{CFG.vehicles=JSON.parse(v);}catch(e){}refreshVeh();}
+function refreshVeh(){let sel=document.getElementById('c_veh');if(sel)sel.innerHTML=CFG.vehicles.map(v=>`<option>${v.name} - ₹${v.rate}/km</option>`).join('');let l=document.getElementById('adminVehList');if(l)l.innerHTML=CFG.vehicles.map(v=>`${v.name}: ₹${v.rate}/km`).join('<br>');}
+function showPage(p){document.getElementById('page_customer').classList.add('hidden');document.getElementById('page_driver').classList.add('hidden');document.getElementById('page_admin').classList.add('hidden');document.getElementById('page_'+p).classList.remove('hidden');}
+function useMyLoc(){if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{fromLatLng={lat:pos.coords.latitude,lng:pos.coords.longitude};fromName=`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;document.getElementById('c_from').value=fromName;map.setView([pos.coords.latitude,pos.coords.longitude],15);L.marker([pos.coords.latitude,pos.coords.longitude]).addTo(map);});}
+function calcKM(){if(!fromLatLng||!toLatLng)return;let R=6371,dLat=(toLatLng.lat-fromLatLng.lat)*Math.PI/180,dLon=(toLatLng.lng-fromLatLng.lng)*Math.PI/180;let a=Math.sin(dLat/2)**2+Math.cos(fromLatLng.lat*Math.PI/180)*Math.cos(toLatLng.lat*Math.PI/180)*Math.sin(dLon/2)**2;let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));let km=R*c;document.getElementById('c_km').value=km.toFixed(2);let rate=15;let base=parseFloat(localStorage.getItem('et_base_fare')||'50');document.getElementById('c_price').innerText="₹"+(km*rate+base).toFixed(0);}
+function bookRide(){if(!fromLatLng||!toLatLng)return alert("From/To select karo");let phone=document.getElementById('c_phone').value.trim();let name=document.getElementById('c_name').value.trim();if(!phone||!name)return alert("Name Phone dalo");let otp=Math.floor(1000+Math.random()*9000);let b={id:Date.now(),fromName:fromName||document.getElementById('c_from').value,toName:toName||document.getElementById('c_to').value,fromLat:fromLatLng.lat,fromLng:fromLatLng.lng,toLat:toLatLng.lat,toLng:toLatLng.lng,from:fromName,to:toName,km:document.getElementById('c_km').value,price:document.getElementById('c_price').innerText,vehicle:document.getElementById('c_veh').value,phone:phone,name:name,otp:otp,status:"pending",time:new Date().toLocaleString()};let arr=JSON.parse(localStorage.getItem('et_book')||'[]');arr.push(b);localStorage.setItem('et_book',JSON.stringify(arr));if(window.fbDb)fbDb.ref('bookings_v33_5/'+b.id).set(b);document.getElementById('c_msg').innerHTML=`<div style="background:#dcfce7;padding:10px;border-radius:10px;border:2px solid #22c55e"><b>✅ Booked!</b> OTP: <b>${otp}</b></div>`;document.getElementById('c_otp_show').classList.remove('hidden');document.getElementById('c_otp_show').innerHTML=`OTP: <b>${otp}</b> Driver ko dena`;document.getElementById('c_live_section').classList.remove('hidden');}
+function regDriver(){let n=document.getElementById('d_name').value,ph=document.getElementById('d_phone').value,ps=document.getElementById('d_pass').value;if(!n||!ph||!ps)return alert("All bharo");let d={id:Date.now(),name:n,phone:ph,pass:ps,vehno:document.getElementById('d_vehno').value,vtype:document.getElementById('d_vtype').value};let arr=JSON.parse(localStorage.getItem('et_drivers')||'[]');arr.push(d);localStorage.setItem('et_drivers',JSON.stringify(arr));alert("Registered! Login karo");}
+function loginDriver(){let ph=document.getElementById('d_login_phone').value,ps=document.getElementById('d_login_pass').value;let arr=JSON.parse(localStorage.getItem('et_drivers')||'[]');let f=arr.find(x=>x.phone==ph&&x.pass==ps);if(!f)return alert("Wrong");localStorage.setItem('et_current_driver',JSON.stringify(f));document.getElementById('d_auth').classList.add('hidden');document.getElementById('d_dash').classList.remove('hidden');loadDriverBookings();}
+function logoutDriver(){localStorage.removeItem('et_current_driver');document.getElementById('d_auth').classList.remove('hidden');document.getElementById('d_dash').classList.add('hidden');}
+function trackMe(){if(!navigator.geolocation)return alert("No GPS");navigator.geolocation.getCurrentPosition(pos=>{let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');let loc={lat:pos.coords.latitude,lng:pos.coords.longitude,time:Date.now()};localStorage.setItem('et_driver_loc_'+cur.phone,JSON.stringify(loc));if(window.fbDb)fbDb.ref('driver_locs/'+cur.phone).set(loc);map2.setView([loc.lat,loc.lng],16);L.marker([loc.lat,loc.lng]).addTo(map2).bindPopup("YOU LIVE").openPopup();alert("✅ LIVE ON - Sahi location customer ko dikhega!");});}
+function acceptBook(id){let arr=JSON.parse(localStorage.getItem('et_book')||'[]');let b=arr.find(x=>String(x.id)==String(id));let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');b.status='accepted';b.driverPhone=cur.phone;localStorage.setItem('et_book',JSON.stringify(arr));if(window.fbDb)fbDb.ref('bookings_v33_5/'+b.id).set(b);loadDriverBookings();showBlueDriverLive(b.fromLat,b.fromLng,b.toLat,b.toLng);}
+function adminLogin(){let u=document.getElementById('a_user').value,p=document.getElementById('a_pass').value;if(u=='admin'&&p=='admin123'){document.getElementById('adminLogin').classList.add('hidden');document.getElementById('adminArea').classList.remove('hidden');loadAdmin();}else alert("Wrong admin");}
+function loadAdmin(){let arr=JSON.parse(localStorage.getItem('et_book')||'[]');document.getElementById('adminBookings').innerHTML=arr.filter(b=>b.status!='completed').map(b=>`${b.fromName}→${b.toName} | ${b.status} | ${b.price}`).join('<br>')||"No live";document.getElementById('adminHistory').innerHTML=arr.filter(b=>b.status=='completed').map(b=>`✅ ${b.fromName}→${b.toName} | ${b.price} | ${b.completedTime}`).join('<br>')||"No history";document.getElementById('adminDriversList').innerHTML=(JSON.parse(localStorage.getItem('et_drivers')||'[]')).map(d=>`${d.name} | ${d.phone} | ${d.vtype}`).join('<br>');loadAdminFullEdit();}
+window.onload=init;
+</script>
+
+<!-- FINAL ALL FEATURES - Blue Line + OTP + Complete + Admin Full Edit -->
+<script>
+let _blueLine=null,_c_blueLine=null,custLiveMarker=null;
+window.showBlueDriverLive=function(f1,f2,t1,t2){try{let m=window.map2||window.map;if(_blueLine)try{m.removeLayer(_blueLine);}catch(e){}}catch(e){}_blueLine=L.polyline([[f1,f2],[t1,t2]],{color:'blue',weight:7}).addTo(window.map2||window.map);(window.map2||window.map).fitBounds(_blueLine.getBounds(),{padding:[30,30]});fetch(`https://router.project-osrm.org/route/v1/driving/${f2},${f1};${t2},${t1}?overview=full&geometries=geojson`).then(r=>r.json()).then(d=>{if(d.routes&&d.routes[0]){try{(window.map2||window.map).removeLayer(_blueLine)}catch(e){};_blueLine=L.geoJSON(d.routes[0].geometry,{style:{color:'#0b5bff',weight:7}}).addTo(window.map2||window.map);}});if(window.c_live_map){try{if(_c_blueLine)c_live_map.removeLayer(_c_blueLine);}catch(e){};_c_blueLine=L.polyline([[f1,f2],[t1,t2]],{color:'blue',weight:7,dashArray:'10,10'}).addTo(c_live_map);}};
+window.verifyPickupOTP=function(id){let arr=JSON.parse(localStorage.getItem('et_book')||'[]');let b=arr.find(x=>String(x.id)==String(id));let inp=document.getElementById('otp_'+id);if(inp.value.trim()!=String(b.otp))return alert("OTP galat! Sahi: "+b.otp);b.status='started';localStorage.setItem('et_book',JSON.stringify(arr));if(window.fbDb)fbDb.ref('bookings_v33_5/'+b.id).set(b);alert('✅ OTP sahi! Trip Started');loadDriverBookings();};
+window.completeTrip=function(id){if(!confirm("Trip complete? Customer portal se hat jayega, sirf history me rahega."))return;let arr=JSON.parse(localStorage.getItem('et_book')||'[]');let b=arr.find(x=>String(x.id)==String(id));b.status='completed';b.completedTime=new Date().toLocaleString();localStorage.setItem('et_book',JSON.stringify(arr));if(window.fbDb)fbDb.ref('bookings_v33_5/'+b.id).set(b);alert('✅ Completed!');loadDriverBookings();loadAdmin();};
+let _oldLB=window.loadDriverBookings;window.loadDriverBookings=function(){let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');let all=JSON.parse(localStorage.getItem('et_book')||'[]');let arr=all.filter(b=>b.status=='pending'||(b.driverPhone==cur.phone&&(b.status=='accepted'||b.status=='started')));if(!arr.length&&_oldLB)return _oldLB();let html=arr.map(b=>{if(b.status=='pending')return `<div style="background:#fff;padding:12px;border:2px solid #000;border-radius:12px;margin-top:8px"><b>${b.fromName||b.from}</b>→${b.toName||b.to}<br>OTP:${b.otp}<br><button class="btn btn-y" onclick="acceptBook(${b.id})">Accept</button> <button class="btn btn-b" onclick="showBlueDriverLive(${b.fromLat},${b.fromLng},${b.toLat},${b.toLng})">🔵 Blue Line</button></div>`;if(b.status=='accepted')return `<div style="background:#fef3c7;padding:12px;border:2px solid #f59e0b;border-radius:12px;margin-top:8px"><b>${b.fromName}</b>→${b.toName}<br>OTP:<b>${b.otp}</b><br><input id="otp_${b.id}" placeholder="Customer OTP"><button class="btn btn-b" onclick="verifyPickupOTP(${b.id})">OTP Verify</button></div>`;if(b.status=='started')return `<div style="background:#dbeafe;padding:12px;border:2px solid #0b5bff;border-radius:12px;margin-top:8px"><b>Started</b> ${b.fromName}→${b.toName}<br><button class="btn" style="background:#22c55e;color:#fff" onclick="completeTrip(${b.id})">✅ Complete Trip</button></div>`;}).join('');document.getElementById('d_area').innerHTML=html||"No bookings";};
+function loadAdminFullEdit(){let vehs=JSON.parse(localStorage.getItem('et_vehicles')||'[]');if(!vehs.length&&window.CFG)vehs=CFG.vehicles||[];let cont=document.getElementById('adminVehEditNew');if(cont)cont.innerHTML=vehs.map((v,i)=>`<div style="display:flex;gap:6px;margin:6px 0"><span style="flex:1">${v.name}</span><input id="veh_rate_new_${i}" value="${v.rate||10}" style="width:80px;padding:6px;border:2px solid #000;border-radius:6px">₹/km</div>`).join('');document.getElementById('a_daily_new').value=localStorage.getItem('et_daily_payable')||'500';document.getElementById('a_monthly_new').value=localStorage.getItem('et_monthly_payable')||'15000';document.getElementById('a_comm_new').value=localStorage.getItem('et_commission')||'20';document.getElementById('a_base_new').value=localStorage.getItem('et_base_fare')||'50';document.getElementById('a_qr_text_new').value=localStorage.getItem('et_qr_text')||'';document.getElementById('a_qr_url_new').value=localStorage.getItem('et_qr_url')||'';}
+window.saveVehRatesNew=function(){let vehs=JSON.parse(localStorage.getItem('et_vehicles')||'[]');if(!vehs.length)vehs=CFG.vehicles;vehs.forEach((v,i)=>{let inp=document.getElementById('veh_rate_new_'+i);if(inp)v.rate=parseFloat(inp.value)||v.rate;});localStorage.setItem('et_vehicles',JSON.stringify(vehs));alert("✅ Vehicle rates saved");};
+window.saveDriverPayableNew=function(){localStorage.setItem('et_daily_payable',document.getElementById('a_daily_new').value);localStorage.setItem('et_monthly_payable',document.getElementById('a_monthly_new').value);localStorage.setItem('et_commission',document.getElementById('a_comm_new').value);alert("✅ Driver payable saved");};
+window.saveBasePriceNew=function(){localStorage.setItem('et_base_fare',document.getElementById('a_base_new').value);alert("✅ Base price saved");};
+window.saveQRNew=function(){localStorage.setItem('et_qr_text',document.getElementById('a_qr_text_new').value);localStorage.setItem('et_qr_url',document.getElementById('a_qr_url_new').value);alert("✅ QR saved");};
+window.downloadExcelNew=function(type){let bookings=JSON.parse(localStorage.getItem('et_book')||'[]');let drivers=JSON.parse(localStorage.getItem('et_drivers')||'[]');let data=type=='bookings'?bookings:type=='drivers'?drivers:[...bookings,...drivers];if(!data.length)return alert("No data");if(window.XLSX){let ws=XLSX.utils.json_to_sheet(data);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,type);XLSX.writeFile(wb,`easy_trip_${type}.xlsx`);}else{let csv=Object.keys(data[0]).join(",")+"\n"+data.map(r=>Object.values(r).map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");let blob=new Blob([csv],{type:'text/csv'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${type}.csv`;a.click();}};
+if(window.fbDb){fbDb.ref('driver_locs').on('value',snap=>{let locs=snap.val();if(!locs)return;let all=JSON.parse(localStorage.getItem('et_book')||'[]');let cust=JSON.parse(localStorage.getItem('et_customer_data')||'{}');let last=all.filter(b=>(b.phone==cust.phone||b.customerLoggedPhone==cust.phone)&&(b.status=='accepted'||b.status=='started')).pop();if(!last||!last.driverPhone)return;let dloc=locs[last.driverPhone];if(!dloc)return;if(!window.c_live_map)return;try{if(_c_blueLine)c_live_map.removeLayer(_c_blueLine);}catch(e){}_c_blueLine=L.polyline([[dloc.lat,dloc.lng],[last.fromLat,last.fromLng]],{color:'blue',weight:7,dashArray:'10,10'}).addTo(c_live_map);try{if(custLiveMarker)c_live_map.removeLayer(custLiveMarker);}catch(e){}custLiveMarker=L.marker([dloc.lat,dloc.lng],{icon:L.icon({iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',iconSize:[32,32]})}).addTo(c_live_map).bindPopup("🚗 Driver LIVE").openPopup();});}
+navigator.geolocation.watchPosition(p=>{let cur=JSON.parse(localStorage.getItem('et_current_driver')||'{}');if(!cur.phone)return;let loc={lat:p.coords.latitude,lng:p.coords.longitude,time:Date.now()};localStorage.setItem('et_driver_loc_'+cur.phone,JSON.stringify(loc));if(window.fbDb)fbDb.ref('driver_locs/'+cur.phone).set(loc);},null,{enableHighAccuracy:true});
+</script>
+
+</body>
+</html>
