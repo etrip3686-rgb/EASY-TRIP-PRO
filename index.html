@@ -66,23 +66,66 @@ input,select,textarea{width:100%;padding:12px;border-radius:12px;border:2px soli
 <button class="btn btn-loc" id="curBtnText" onclick="useCurrentLocation()">📍 My Current Location</button>
 <button class="btn btn-b" style="font-size:13px" onclick="useMapClickMode()">🗺️ Map se Select</button>
 </div>
- <!-- YAHAPASTE KARO - START -->
-<div id="cAuthBoxFinal" style="background:#fff9c4;border:3px solid #000;border-radius:14px;padding:12px;margin:10px 0;">
-  <b>🔐 CUSTOMER LOGIN</b><br>
-  <small>Dusre customer ko aapki booking nahi dikhegi</small>
+ <div id="cAuthBoxFinal" style="background:#fff9c4;border:3px solid #000;border-radius:14px;padding:12px;margin:10px 0;">
+  <b>🔐 CUSTOMER LOGIN</b><br><small id="c_auth_msg">Login karo toh booking private rahegi</small>
   <div style="display:flex;gap:6px;margin-top:8px">
     <input id="c_phone_login" placeholder="Phone 10 digit" style="flex:1;padding:10px;border:2px solid #000;border-radius:8px">
     <input id="c_pass_login" type="password" placeholder="Password" style="flex:1;padding:10px;border:2px solid #000;border-radius:8px">
   </div>
   <div style="display:flex;gap:6px;margin-top:8px">
-    <button onclick="cRegisterFinal()" style="flex:1;padding:12px;background:#ffcc00;border:2px solid #000;border-radius:10px;font-weight:900">📝 Register</button>
-    <button onclick="cLoginFinal()" style="flex:1;padding:12px;background:#0f172a;color:#ffcc00;border:2px solid #000;border-radius:10px;font-weight:900">🔑 Login</button>
-    <button onclick="cForgotFinal()" style="flex:1;padding:10px;background:#fff;border:2px solid #000;border-radius:10px;font-weight:900">❓ Forgot</button>
+    <button id="btnReg" style="flex:1;padding:12px;background:#ffcc00;border:2px solid #000;border-radius:10px;font-weight:900">📝 Register</button>
+    <button id="btnLog" style="flex:1;padding:12px;background:#0f172a;color:#ffcc00;border:2px solid #000;border-radius:10px;font-weight:900">🔑 Login</button>
+    <button id="btnForgot" style="flex:1;padding:10px;background:#fff;border:2px solid #000;border-radius:10px;font-weight:900">❓ Forgot</button>
   </div>
-  <div id="c_login_status_final" style="margin-top:8px;font-size:12px;font-weight:700"></div>
+  <div id="c_login_status_final" style="margin-top:8px;font-weight:700;font-size:13px"></div>
 </div>
-<!-- YAHAPASTE KARO - END -->
-
+<script>
+(function(){
+if(!localStorage.getItem('et_customers')) localStorage.setItem('et_customers','[]');
+function getCusts(){return JSON.parse(localStorage.getItem('et_customers')||'[]');}
+function showStatus(){
+  var log=JSON.parse(localStorage.getItem('et_customer_login')||'null');
+  var st=document.getElementById('c_login_status_final');
+  if(log&&log.phone){
+    st.innerHTML='✅ Login: '+log.phone+' <button onclick="localStorage.removeItem(\'et_customer_login\');location.reload()" style="background:#000;color:#fff;padding:3px 8px;border-radius:6px">Logout</button>';
+    var cp=document.getElementById('c_phone'); if(cp) cp.value=log.phone;
+  }
+}
+document.getElementById('btnReg').onclick=function(){
+  var phone=document.getElementById('c_phone_login').value.trim();
+  var pass=document.getElementById('c_pass_login').value.trim();
+  if(phone.length<10) return alert('10 digit phone');
+  if(pass.length<3) return alert('3 akshar password');
+  var custs=getCusts();
+  if(custs.find(c=>c.phone==phone)) return alert('Already hai - Login karo');
+  var name=(document.getElementById('c_name')?.value.trim())||prompt('Naam?')||'Customer';
+  custs.push({phone:phone,pass:pass,name:name});
+  localStorage.setItem('et_customers',JSON.stringify(custs));
+  localStorage.setItem('et_customer_login',JSON.stringify({phone:phone,name:name}));
+  alert('✅ Register OK'); location.reload();
+};
+document.getElementById('btnLog').onclick=function(){
+  var phone=document.getElementById('c_phone_login').value.trim();
+  var pass=document.getElementById('c_pass_login').value.trim();
+  var f=getCusts().find(c=>c.phone==phone && c.pass==pass);
+  if(!f) return alert('Galat password');
+  localStorage.setItem('et_customer_login',JSON.stringify({phone:f.phone,name:f.name}));
+  alert('✅ Login OK'); location.reload();
+};
+document.getElementById('btnForgot').onclick=function(){
+  var phone=prompt('Phone:'); if(!phone) return;
+  var f=getCusts().find(c=>c.phone==phone);
+  if(f) alert('Password: '+f.pass); else alert('Nahi mila');
+};
+showStatus();
+var oldBook=window.book;
+window.book=function(){
+  var log=JSON.parse(localStorage.getItem('et_customer_login')||'null');
+  if(!log||!log.phone){alert('⚠️ Pehle Register/Login karo!'); return;}
+  if(oldBook) oldBook();
+};
+})();
+</script>
 <div class="customer-section">   <-- ye aapka purana hai
   <h2>Customer Booking</h2>
   <input id="c_name"
