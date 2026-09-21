@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>EASY TRIP v33.2 - FINAL</title>
+<style>
+.leaflet-tile { animation: none !important; }
+#map,#map2,#map3,#c_live_map{height:50vh;width:100%;border-radius:20px;border:3px solid #0f172a}
+</style>
+</head>
+<body>
+<div class="top">🚖 EASY TRIP</div>
+<div id="mainDashboard">
+  <div onclick="openCustomer()" style="background:#ffcc00;border:3px solid #000">🧑‍💼 CUSTOMER</div>
+  <div onclick="openDriver()" style="background:#fff;border:3px solid #000">🏍️ DRIVER</div>
+</div>
+<div id="p-customer" style="display:none">  <!-- FIXED --><div id="p-customer" style="display:none"> <!-- pehle yahan p-driver tha, fix kar diya -->
+<button onclick="openHome()">← Back to Home</button>
+
+<div id="p-driver" class="hidden">
+<h2>🚗 Driver - Simple Register</h2>
+...
+<div id="p-admin" class="hidden">
+<b>🔒 Admin v33.2</b><div class="card" style="border:3px solid #22c55e">
+<b>APK v33.2</b><br>
+<input id="apkVersion" value="33.2">
+<input id="apkLink" value="https://drive.usercontent.google.com/download?id=1QFJh28EgryuY2O4j0gJVv4AjN8dOegej&export=download&authuser=0">
+<!-- catbox wala link HATA DIYA -->
+</div>
+
+const FIX_LOC={
+"Bokakhat Town":[26.6247,93.6035],
+"Titabar":[26.60,94.20],
+...
+};
+
+function showRoute(fLat,fLng,tLat,tLng){
+ routeLine=L.polyline(...,{color:'#007bff',weight:6}) // SOLID - dashArray hata diyafromMarker=L.marker(fromLatLng).addTo(map).bindTooltip("FROM: "+fromName)
+...
+function searchLocation(q,type){
+  let matches=Object.keys(FIX_LOC).filter(k=>k.toLowerCase().includes(q.toLowerCase()));
+  // Bokakhat, Titabar, Golaghat sab search hoga
+}
+function useCurrentLocation(){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    fromLatLng=L.latLng(pos.coords.latitude,pos.coords.longitude);
+    fromName="My Current Location";
+  })
+}
+function showP(p){
+  // customer/driver/admin show hide
+}function book(){
+  let phone=document.getElementById('c_phone').value.trim();
+  let name=document.getElementById('c_name').value.trim();
+  let otp=Math.floor(1000+Math.random()*9000);
+  let b={id:Date.now(),fromName:fromName,toName:toName,
+         fromLat:fromLatLng.lat, fromLng:fromLatLng.lng,
+         phone:phone, name:name, otp:otp, status:"pending"};
+  // booking save + live tracking start
+}
+
+function clearCustomer(){
+  // Naya Number / Naya Customer dal sakte ho
+}function acceptBook(id){
+  b.status="accepted"; 
+  b.driver=cur.phone;
+  alert(`Accept Kiya!\n${b.fromName} → ${b.toName}\nOTP:${b.otp}\nLive ON karo`);
+}
+function verifyOTP(){
+  let otp=document.getElementById('d_otp_input').value;
+  f.status="completed"; // Customer ko Complete dikhega
+}
+function adminLogin(){
+  if(u==CFG.adminCred.user && p==CFG.adminCred.pass){
+    loadAdmin(); loadAdminDrivers();
+  }
+}function loadAdmin(){
+  // Bookings: time | status | OTP | From → To
+}
+function loadAdminDrivers(){
+  // Pending → Approve / Reject
+  // Approved → Lock / Unlock
+}
+function exportExcel(type){
+  // Drivers, Bookings, Payments, Device_History
+  // 4 sheets wala FULL download
+}
+function applyDesign(){
+  document.getElementById('logoText').innerText=CFG.design.logo;
+}let _lastCount=0, _ringtoneURL=localStorage.getItem('et_ringtone')||'';
+function playBeep(){
+  // naya booking aaya to beep + vibration
+  if(_ringtoneURL){new Audio(_ringtoneURL).play();}
+  if(navigator.vibrate)navigator.vibrate([400,100,400]);
+}
+window.loadDriverBookings=function(){
+  // 15KM ke andar wale bookings hi dikhao
+  let filt=pend.filter(b=>calcDist(dloc.lat,dloc.lng,b.fromLat,b.fromLng)<=15);
+}
+window.doComplete=function(id){
+  // OTP pucho, trip complete karo
+}window.FIX_DriverView=function(){
+  // Har booking me: Customer Name + Phone + From → To + Price
+  // Active booking = green border
+  // Pending = black border
+  // Blue Line button: ET_showBlue(id)
+  // Complete button: OTP pucho
+}
+
+window.ET_showBlue=function(id){
+  // Blue solid line: fromLat,fromLng → toLat,toLng
+  // weight:7, color:'blue' — SOLID
+}
+
+window.ET_deleteBooking=function(id){
+  // Delete booking
+}
+
+// Firebase auto sync
+const firebaseConfig = {
+  apiKey: "AIzaSyAl3Y4UJ9XdI3xBXNF6PuIAypz3PjYv1ng",
+  ...
+}
+window.saveCFG=function(){
+  fbDb.ref(FB_PATH).set(cfg); // har device pe auto update
+}window.cRegister = function(){
+  // Customer ko register karna must hai
+  // Phone + Password prompt
+}
+window.trackMe = function(){
+  // Golaghat district box: 26.0-27.2, 93.0-95.0
+  // Real GPS - bahar ho to Golaghat me fallback
+  // Firebase pe driver_locs update
+}
+window.showBlueDriverLive = function(pickLat,pickLng,dropLat,dropLng){
+  // Driver real location se pickup tak BLUE line
+  // weight:9-10, solid blue
+}// FINAL FIX - Sab dotted hatao, solid blue karo
+<script>
+function showPage(id){
+  var e=document.getElementById(id);
+  e.classList.remove('hidden');
+  e.style.setProperty('display','block','important');
+}
+function hidePage(id){
+  var e=document.getElementById(id);
+  e.style.setProperty('display','none','important');
+}
+function openCustomer(){
+  hidePage('mainDashboard');hidePage('p-driver');hidePage('p-admin');
+  showPage('p-customer');
+  setTimeout(function(){try{map.invalidateSize();}catch(e){}},600);
+}
+function openDriver(){
+  hidePage('mainDashboard');hidePage('p-customer');hidePage('p-admin');
+  showPage('p-driver');
+}
+function openHome(){
+  showPage('mainDashboard');
+  hidePage('p-customer');hidePage('p-driver');hidePage('p-admin');
+}
+window.showRoute=function(fLat,fLng,tLat,tLng){
+ window.routeLine=L.polyline([[fLat,fLng],[tLat,tLng]],
+   {color:'#007bff',weight:7,opacity:0.95}).addTo(map); // SOLID
+ window.routeLine2=L.polyline([[fLat,fLng],[tLat,tLng]],
+   {color:'#007bff',weight:7,opacity:0.95}).addTo(map2); // SOLID
+ // OSRM road route bhi solid blue
+ fetch('https://router.project-osrm.org/route/v1/driving/'+fLng+','+fLat+';'+tLng+','+tLat+'?overview=full&geometries=geojson')
+.then(r=>r.json()).then(d=>{
+   window.routeLine=L.geoJSON(d.routes[0].geometry,
+     {style:{color:'#007bff',weight:7,opacity:0.95}}).addTo(map);
+ });
+};
+document.addEventListener('DOMContentLoaded',function(){
+  showPage('mainDashboard');
+  hidePage('p-customer');hidePage('p-driver');hidePage('p-admin');
+});
+</script>
+</body>
+</html>
