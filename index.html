@@ -78,17 +78,42 @@ input,select,textarea{width:100%;padding:12px;border-radius:12px;border:2px soli
     <p style="font-size:12px;margin:6px 0;color:#333">Assam ka sabse fast, safe aur sasta ride. 5 min me auto, OTP safe, low price. Bokakhat, Titabar, Jorhat me 24x7.</p>
   </div>
 </div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 12px">
-  <div onclick="document.getElementById('p-customer').scrollIntoView({behavior:'smooth'})" style="background:#ffcc00;border:3px solid #000;border-radius:18px;padding:16px;text-align:center;box-shadow:4px 4px 0 #000">
-    <div style="font-size:40px">🧑‍💼</div><b>CUSTOMER</b><br><small>Book Karo</small><br><button style="margin-top:8px;background:#000;color:#ffcc00;border:none;border-radius:10px;padding:8px 14px;font-weight:900;width:100%">Book Now →</button>
+<div id="mainDashboard" style="padding:0 12px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+    <div onclick="openCustomer()" style="background:#ffcc00;border:3px solid #000;border-radius:20px;padding:20px;text-align:center;box-shadow:5px 5px 0 #000;cursor:pointer">
+      <div style="font-size:48px">🧑‍💼</div><b>CUSTOMER</b><br><small>Book Karo</small><div style="margin-top:10px;background:#000;color:#ffcc00;padding:10px;border-radius:12px;font-weight:900">Book Now →</div>
+    </div>
+    <div onclick="openDriver()" style="background:#fff;border:3px solid #000;border-radius:20px;padding:20px;text-align:center;box-shadow:5px 5px 0 #000;cursor:pointer">
+      <div style="font-size:48px">🏍️</div><b>DRIVER</b><br><small>Kamao</small><div style="margin-top:10px;background:#0f172a;color:#fff;padding:10px;border-radius:12px;font-weight:900">Driver →</div>
+    </div>
   </div>
-  <div onclick="document.getElementById('p-driver')?.scrollIntoView({behavior:'smooth'}) || document.querySelector('[id*=driver]').scrollIntoView({behavior:'smooth'})" style="background:#fff;border:3px solid #000;border-radius:18px;padding:16px;text-align:center;box-shadow:4px 4px 0 #000">
-    <div style="font-size:40px">🏍️</div><b>DRIVER</b><br><small>Kamao</small><br><button style="margin-top:8px;background:#0f172a;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-weight:900;width:100%">Driver →</button>
-  </div>
+  <div style="text-align:center;margin:10px;font-size:11px;color:#888">Admin ke liye 🚕 pe 5 bar click karo</div>
 </div>
-<div style="text-align:center;margin:8px;font-size:11px;color:#666">Admin ke liye 🚕 pe 5 bar click karo</div>
-<!-- RAPIDO HEADER - YAHAN TAK -->
+
+<script>
+function openCustomer(){
+  document.getElementById('mainDashboard').style.display='none';
+  document.getElementById('p-customer').style.display='block';
+  document.getElementById('p-driver').style.display='none';
+  const adm=document.getElementById('p-admin'); if(adm) adm.style.display='none';
+  window.scrollTo(0,0);
+}
+function openDriver(){
+  document.getElementById('mainDashboard').style.display='none';
+  document.getElementById('p-customer').style.display='none';
+  document.getElementById('p-driver').style.display='block';
+  const adm=document.getElementById('p-admin'); if(adm) adm.style.display='none';
+  window.scrollTo(0,0);
+}
+function openHome(){
+  document.getElementById('mainDashboard').style.display='block';
+  document.getElementById('p-customer').style.display='none';
+  document.getElementById('p-driver').style.display='none';
+  const adm=document.getElementById('p-admin'); if(adm) adm.style.display='none';
+  window.scrollTo(0,0);
+}
+let c=0; const lg=document.getElementById('secretAdminLogo'); if(lg){lg.onclick=()=>{c++; if(c>=5){c=0; const a=document.getElementById('p-admin'); if(a){a.style.display='block'; a.scrollIntoView({behavior:'smooth'}); alert('🔓 Admin');}}}};
+</script>
 <div id="p-customer">
 <div class="card"><h2 id="custHead">📍 Book Your Ride - Assam</h2><div id="map"></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
