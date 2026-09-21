@@ -89,7 +89,30 @@ input,select,textarea{width:100%;padding:12px;border-radius:12px;border:2px soli
   </div>
   <div style="text-align:center;margin:10px;font-size:11px;color:#888">Admin ke liye 🚕 pe 5 bar click karo</div>
 </div>
-
+<script>
+function openCustomer(){
+  document.getElementById('mainDashboard').style.display='none';
+  let c=document.getElementById('p-customer'); c.style.display='block'; c.classList.remove('hidden');
+  let d=document.getElementById('p-driver'); d.style.display='none';
+  let a=document.getElementById('p-admin'); if(a) a.style.display='none';
+  window.scrollTo(0,0);
+}
+function openDriver(){
+  document.getElementById('mainDashboard').style.display='none';
+  document.getElementById('p-customer').style.display='none';
+  let d=document.getElementById('p-driver'); d.style.display='block'; d.classList.remove('hidden');
+  let a=document.getElementById('p-admin'); if(a) a.style.display='none';
+  window.scrollTo(0,0);
+}
+function openHome(){
+  document.getElementById('mainDashboard').style.display='block';
+  document.getElementById('p-customer').style.display='none';
+  document.getElementById('p-driver').style.display='none';
+  let a=document.getElementById('p-admin'); if(a) a.style.display='none';
+  window.scrollTo(0,0);
+}
+let cnt=0; const logo=document.getElementById('secretAdminLogo'); if(logo){logo.onclick=()=>{cnt++; if(cnt>=5){cnt=0; let adm=document.getElementById('p-admin'); adm.style.display='block'; adm.classList.remove('hidden'); adm.scrollIntoView({behavior:'smooth'}); alert('🔓 Admin');}}};
+</script>
 <script>
 function openCustomer(){
   document.getElementById('mainDashboard').style.display='none';
