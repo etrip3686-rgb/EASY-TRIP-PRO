@@ -61,8 +61,10 @@ input,select,textarea{width:100%;padding:12px;border-radius:12px;border:2px soli
 </div>
 </div>
 <div id="p-customer">
+ <button id="satBtn" onclick="toggleSat()" style="position:absolute;z-index:1000;right:15px;margin-top:60px;background:#0f172a;color:#ffcc00;padding:8px 14px;border-radius:20px;font-weight:800;border:2px solid #ffcc00">🛰️ Satellite</button>
+<div id="map"></div>
 <div class="card"><h2 id="custHead">📍 Book Your Ride - Assam</h2><div id="map"></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
 <button class="btn btn-loc" id="curBtnText" onclick="useCurrentLocation()">📍 My Current Location</button>
 <button class="btn btn-b" style="font-size:13px" onclick="useMapClickMode()">🗺️ Map se Select</button>
 </div>
@@ -193,7 +195,14 @@ let map,map2,map3,c_live_map,fromLatLng,toLatLng,fromMarker,toMarker,driverMarke
 let fromName="",toName="";
 let currentBookingId=null, currentDriverPhone=null;
 const bokakhat=[26.6247,93.6035];
-function getTileLayer(){return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19, attribution:'© Esri'});}
+let streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19, attribution:'© Esri'});
+let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+let isSat = false;
+function getTileLayer(){return streetLayer;}
+function toggleSat(){
+  if(!isSat){ try{map.removeLayer(streetLayer);}catch(e){} satelliteLayer.addTo(map); isSat=true; document.getElementById('satBtn').innerText="🗺️ Street"; }
+  else { try{map.removeLayer(satelliteLayer);}catch(e){} streetLayer.addTo(map); isSat=false; document.getElementById('satBtn').innerText="🛰️ Satellite"; }
+}
 let routeLine=null,routeLine2=null,routeLine3=null;
 function showRoute(fLat,fLng,tLat,tLng){
  try{if(routeLine)map.removeLayer(routeLine);}catch(e){}
