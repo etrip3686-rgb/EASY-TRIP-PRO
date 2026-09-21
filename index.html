@@ -199,7 +199,23 @@ function showRoute(fLat,fLng,tLat,tLng){
  try{if(routeLine)map.removeLayer(routeLine);}catch(e){}
  try{if(routeLine2)map2.removeLayer(routeLine2);}catch(e){}
  if(!fLat||!fLng||!tLat||!tLng) return;
- routeLine=L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#007bff',weight:6,dashArray:'12,12'}).addTo(map);
+ function showRoute(fLat,fLng,tLat,tLng){
+ try{if(routeLine)map.removeLayer(routeLine);}catch(e){}
+ try{if(routeLine2)map2.removeLayer(routeLine2);}catch(e){}
+ if(!fLat||!fLng||!tLat||!tLng) return;
+ // SOLID BLUE - no dashArray
+ routeLine=L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#007bff',weight:7,opacity:1}).addTo(map);
+ try{routeLine2=L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#007bff',weight:7,opacity:1}).addTo(map2);}catch(e){}
+ try{map.fitBounds(routeLine.getBounds(),{padding:[50,50]});}catch(e){}
+ fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`).then(r=>r.json()).then(d=>{
+  if(d.routes && d.routes[0]){
+   try{map.removeLayer(routeLine);}catch(e){}
+   try{map2.removeLayer(routeLine2);}catch(e){}
+   routeLine=L.geoJSON(d.routes[0].geometry,{style:{color:'#007bff',weight:7,opacity:1}}).addTo(map);
+   try{routeLine2=L.geoJSON(d.routes[0].geometry,{style:{color:'#007bff',weight:7,opacity:1}}).addTo(map2);}catch(e){}
+  }
+ }).catch(e=>{});
+}
  try{routeLine2=L.polyline([[fLat,fLng],[tLat,tLng]],{color:'#007bff',weight:6,dashArray:'12,12'}).addTo(map2);}catch(e){}
  try{map.fitBounds(routeLine.getBounds(),{padding:[50,50]});}catch(e){}
  fetch(`https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`).then(r=>r.json()).then(d=>{
