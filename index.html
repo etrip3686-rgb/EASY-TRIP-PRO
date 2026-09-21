@@ -114,7 +114,8 @@ function openHome(){
 }
 let c=0; const lg=document.getElementById('secretAdminLogo'); if(lg){lg.onclick=()=>{c++; if(c>=5){c=0; const a=document.getElementById('p-admin'); if(a){a.style.display='block'; a.scrollIntoView({behavior:'smooth'}); alert('🔓 Admin');}}}};
 </script>
-<div id="p-customer">
+<div id="p-driver" style="display:none">
+<button onclick="openHome()" style="margin:10px;padding:8px 14px;border:2px solid #000;border-radius:10px;background:#fff;font-weight:700">← Back to Home</button>
 <div class="card"><h2 id="custHead">📍 Book Your Ride - Assam</h2><div id="map"></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
 <button class="btn btn-loc" id="curBtnText" onclick="useCurrentLocation()">📍 My Current Location</button>
@@ -209,7 +210,8 @@ window.book=function(){
 <div id="adminInfoCustomer"></div>
 </div>
 </div>
-<div id="p-driver" class="hidden">
+<div id="p-driver" class="hidden" style="display:none">
+<button onclick="openHome()" style="margin:10px;padding:8px 14px;border:2px solid #000;border-radius:10px;background:#fff;font-weight:700">← Back to Home</button>
 <div class="card"><h2 id="driverHead">🚗 Driver - Simple Register</h2>
 <div id="d_auth">
 <div style="background:#fffbeb;padding:16px;border-radius:16px;border:3px solid #ffcc00">
@@ -243,7 +245,8 @@ window.book=function(){
 <div id="map2"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-b" onclick="trackMe()">📍 Live ON - Customer Dekhega</button><button class="btn btn-y" onclick="loadDriverBookingsMap()">🔄 Refresh</button></div><div style="margin-top:10px"><input id="d_otp_input" placeholder="Customer OTP"><button class="btn btn-y" onclick="verifyOTP()">✅ Verify & Complete Trip</button></div><div id="d_area"></div><button class="btn btn-r" onclick="logoutDriver()">Logout</button></div>
 </div>
 </div>
-<div id="p-admin" class="hidden">
+<div id="p-admin" class="hidden" style="display:none">
+<button onclick="openHome()" style="margin:10px;padding:8px 14px;border:2px solid #000;border-radius:10px;background:#fff;font-weight:700">← Back to Home</button>
 <div class="card"><b>🔒 Admin v33.2 - Logo 5 Click Hidden</b>
 <div id="adminLogin">
 <input id="a_user" placeholder="User"><input id="a_pass" type="password" placeholder="Pass"><button class="btn btn-b" onclick="adminLogin()">Login</button>
