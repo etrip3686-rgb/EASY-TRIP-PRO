@@ -562,89 +562,38 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
 })();
 </script>
 <!-- FIREBASE CODE KHATAM -->
-// ===== DRIVER LOCATION JUMP FIX - Galat jagah nahi dikhega =====
-window.trackMe = function(){
- if(!navigator.geolocation) return alert("GPS nahi");
- if(window._watchId) navigator.geolocation.clearWatch(window._watchId);
- 
- let lastLat = null, lastLng = null;
- let lastAccuratePos = null;
-
- window._watchId = navigator.geolocation.watchPosition(pos=>{
-   let lat = pos.coords.latitude;
-   let lng = pos.coords.longitude;
-   let acc = pos.coords.accuracy; // kitna accurate hai
-   let speed = pos.coords.speed || 0;
-
-   console.log("GPS acc:", acc, "speed:", speed);
-
-   // 1. Agar accuracy 60 meter se zyada kharab hai to ignore karo
-   if(acc > 60){
-     console.log("❌ Accuracy kharab", acc, "ignore");
-     return;
-   }
-
-   // 2. Agar pehli location hai to direct le lo
-   if(lastLat === null){
-     lastLat = lat; lastLng = lng; lastAccuratePos = {lat,lng};
-   } else {
-     // Distance nikalo last sahi location se
-     let dLat = (lat-lastLat)*111000;
-     let dLng = (lng-lastLng)*111000*Math.cos(lastLat*Math.PI/180);
-     let dist = Math.sqrt(dLat*dLat + dLng*dLng);
-
-     // 3. Agar ek jhatke me 300 meter se zyada jump hua aur speed kam hai (gaadi ruki hai) to ignore
-     if(dist > 300 && speed < 5){
-       console.log("❌ Bada jump", dist, "ignore");
-       return;
-     }
-
-     // 4. Chota jump hai to smooth karo - average
-     if(dist < 50){
-       lat = (lastLat*0.7 + lat*0.3);
-       lng = (lastLng*0.7 + lng*0.3);
-     }
-
-     lastLat = lat; lastLng = lng;
-     lastAccuratePos = {lat,lng};
-   }
-
-   // Sahi location save
-   localStorage.setItem('et_driver_live', JSON.stringify({lat:lat,lng:lng,acc:acc,time:Date.now()}));
-
-   // Map pe marker update
-   if(window.map2){
-     if(window.driverMarker) try{window.map2.removeLayer(window.driverMarker)}catch(e){}
-     window.driverMarker = L.marker([lat,lng],{
-       icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/684/684908.png',iconSize:[36,36]})
-     }).addTo(window.map2).bindPopup(`📍 Sahi Location<br>Accuracy: ${acc.toFixed(0)}m`);
-     window.map2.setView([lat,lng],16);
-   }
-
- }, err=>{
-   alert("Location ON karo + High Accuracy ON karo: "+err.message);
- }, {
-   enableHighAccuracy: true, // Sahi location ke liye must
-   maximumAge: 0,
-   timeout: 15000
- });
-
- alert("✅ Live ON - Ab galat jagah nahi dikhega. Phone ko khule me rakho, building ke andar GPS jump karta hai.");
+// ===== DRIVER LOCATION FIX - Sahi Jagah Tikega =====
+window._watchId && navigator.geolocation.clearWatch(window._watchId);
+let lastLat=null,lastLng=null;
+window.trackMe=function(){
+ window._watchId=navigator.geolocation.watchPosition(p=>{
+  let lat=p.coords.latitude,lng=p.coords.longitude,acc=p.coords.accuracy;
+  if(acc>60) return;
+  if(lastLat!==null){
+   let d=Math.sqrt(Math.pow((lat-lastLat)*111000,2)+Math.pow((lng-lastLng)*111000*Math.cos(lastLat*Math.PI/180),2));
+   if(d>300) return;
+   if(d<50){lat=lastLat*0.7+lat*0.3;lng=lastLng*0.7+lng*0.3;}
+  }
+  lastLat=lat;lastLng=lng;
+  localStorage.setItem('et_driver_live',JSON.stringify({lat,lng,time:Date.now()}));
+  if(window.map2){
+   if(window.driverMarker) try{map2.removeLayer(driverMarker)}catch(e){}
+   window.driverMarker=L.marker([lat,lng]).addTo(map2).bindPopup("📍 Sahi: "+acc.toFixed(0)+"m");
+   map2.setView([lat,lng],16);
+  }
+ },null,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+ alert("✅ Live ON");
 };
 
-// 5. Customer ko bhi sirf sahi location dikhao - har 3 sec
-setInterval(()=>{
- let live = JSON.parse(localStorage.getItem('et_driver_live')||'null');
- if(!live) return;
- // 2 minute se purana data ignore
- if(Date.now() - live.time > 120000) return;
- 
- if(window.map){
-   if(window.customerDriverMarker) try{window.map.removeLayer(window.customerDriverMarker)}catch(e){}
-   window.customerDriverMarker = L.marker([live.lat,live.lng],{
-     icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3774/3774096.png',iconSize:[32,32]})
-   }).addTo(window.map).bindPopup("🚗 Driver Yaha Hai - Live");
- }
-},3000);
+// BLUE LINE SABKO - Solid
+window.drawBlueLine=function(fLa,fLo,tLa,tLo,m){
+ m=m||map||map2;
+ if(window._bl) try{m.removeLayer(_bl)}catch(e){}
+ _bl=L.polyline([[fLa,fLo],[tLa,tLo]],{color:'#1a4dff',weight:8,opacity:1}).addTo(m);
+ m.fitBounds(_bl.getBounds(),{padding:[30,30]});
+};
+let _oldCalc=window.calc;
+window.calc=function(){if(_oldCalc)try{_oldCalc()}catch(e){} if(fromLL&&toLL) drawBlueLine(fromLL.lat,fromLL.lng,toLL.lat,toLL.lng,map);};
+window.showBlue=function(id){let b=JSON.parse(localStorage.getItem('et_book')||'[]').find(x=>x.id==id); if(b) drawBlueLine(b.fromLat,b.fromLng,b.toLat,b.toLng,map2);};
 </body>
 </html>
