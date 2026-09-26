@@ -562,92 +562,89 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
 })();
 </script>
 <!-- FIREBASE CODE KHATAM -->
-<script>
-// ====== EASY TRIP FINAL SAFE FIX - Blue + Login - Dashboard safe ======
-// A) BLUE LINE SOLID - purane function ko override
-window.calc = (function(orig){
- return function(){
-  let from = window.fromLL || window.fromLatLng;
-  let to = window.toLL;
-  if(!to) return orig? orig() : null;
-  // KM calc
-  if(orig) try{orig()}catch(e){}
-  // solid blue line force
-  setTimeout(()=>{
-   try{
-    if(window.line && window.map){
-      try{map.removeLayer(line)}catch(e){}
-      window.line = L.polyline([fromLL,toLL],{color:'#0066ff',weight:8,opacity:1,lineCap:'round',lineJoin:'round'}).addTo(map);
-      // OSRM road bhi solid
-      fetch(`https://router.project-osrm.org/route/v1/driving/${fromLL.lng},${fromLL.lat};${toLL.lng},${toLL.lat}?overview=full&geometries=geojson`)
-     .then(r=>r.json()).then(d=>{
-        if(d.routes && d.routes[0]){
-          try{map.removeLayer(line)}catch(e){}
-          window.line = L.geoJSON(d.routes[0].geometry,{style:{color:'#0066ff',weight:8,opacity:1}}).addTo(map);
-          map.fitBounds(window.line.getBounds(),{padding:[30,30]});
-        }
-      });
-    }
-   }catch(e){console.log(e)}
-  },200);
- }
-})(window.calc);
+// ===== DRIVER LOCATION JUMP FIX - Galat jagah nahi dikhega =====
+window.trackMe = function(){
+ if(!navigator.geolocation) return alert("GPS nahi");
+ if(window._watchId) navigator.geolocation.clearWatch(window._watchId);
+ 
+ let lastLat = null, lastLng = null;
+ let lastAccuratePos = null;
 
-// B) CUSTOMER LOGIN - booking refresh pe gayab nahi hogi - portal se hatayega nahi
-(function(){
- // login UI - customer card ke andar dalo, fixed nahi
- let card = document.querySelector('.card') || document.body;
- if(!document.getElementById('custLoginSafe')){
-   let div = document.createElement('div');
-   div.id='custLoginSafe';
-   div.style='background:#0f172a;color:#fff;padding:8px 10px;border-radius:10px;display:flex;gap:6px;align-items:center;margin-bottom:8px';
-   div.innerHTML='<span>👤</span><input id="c_phone_login" placeholder="Phone" style="width:100px;padding:6px;border-radius:6px;border:none"><button onclick="custSafeLogin()" style="padding:6px 10px;background:#ffcc00;border:none;border-radius:6px;font-weight:800">Login</button><span id="c_login_stat" style="font-size:11px;margin-left:auto"></span>';
-   card.prepend(div);
- }
- window.custSafeLogin = function(){
-   let ph = document.getElementById('c_phone_login').value || document.getElementById('c_phone')?.value;
-   if(!ph) return alert('Phone likho');
-   localStorage.setItem('et_cust_phone',ph);
-   document.getElementById('c_login_stat').innerText='✅ '+ph;
-   custSafeRestore();
- }
- window.custSafeRestore = function(){
-   let ph = localStorage.getItem('et_cust_phone');
-   if(!ph) return;
-   let inp = document.getElementById('c_phone_login'); if(inp) inp.value=ph;
-   let stat = document.getElementById('c_login_stat'); if(stat) stat.innerText='✅ '+ph;
-   let all = JSON.parse(localStorage.getItem('et_book')||'[]').filter(b=>b.phone==ph);
-   if(all.length==0) return;
-   let last = all[all.length-1];
-   // OTP div ko HATANA NAHI, dikhana hai
-   let otpDiv = document.getElementById('otpShow');
-   if(otpDiv){
-     otpDiv.classList.remove('hidden');
-     otpDiv.style.display='block';
-     otpDiv.innerHTML='✅ Booking Hai - OTP: <b style="font-size:20px">'+last.otp+'</b><br>'+last.fromName+' → '+last.toName+'<br>'+last.price+' | '+last.status;
+ window._watchId = navigator.geolocation.watchPosition(pos=>{
+   let lat = pos.coords.latitude;
+   let lng = pos.coords.longitude;
+   let acc = pos.coords.accuracy; // kitna accurate hai
+   let speed = pos.coords.speed || 0;
+
+   console.log("GPS acc:", acc, "speed:", speed);
+
+   // 1. Agar accuracy 60 meter se zyada kharab hai to ignore karo
+   if(acc > 60){
+     console.log("❌ Accuracy kharab", acc, "ignore");
+     return;
    }
-   let liveBox = document.getElementById('liveBox');
-   if(liveBox && last.status!=='completed'){
-     liveBox.classList.remove('hidden');
-     liveBox.style.display='block';
+
+   // 2. Agar pehli location hai to direct le lo
+   if(lastLat === null){
+     lastLat = lat; lastLng = lng; lastAccuratePos = {lat,lng};
+   } else {
+     // Distance nikalo last sahi location se
+     let dLat = (lat-lastLat)*111000;
+     let dLng = (lng-lastLng)*111000*Math.cos(lastLat*Math.PI/180);
+     let dist = Math.sqrt(dLat*dLat + dLng*dLng);
+
+     // 3. Agar ek jhatke me 300 meter se zyada jump hua aur speed kam hai (gaadi ruki hai) to ignore
+     if(dist > 300 && speed < 5){
+       console.log("❌ Bada jump", dist, "ignore");
+       return;
+     }
+
+     // 4. Chota jump hai to smooth karo - average
+     if(dist < 50){
+       lat = (lastLat*0.7 + lat*0.3);
+       lng = (lastLng*0.7 + lng*0.3);
+     }
+
+     lastLat = lat; lastLng = lng;
+     lastAccuratePos = {lat,lng};
    }
-   // phone input me bhi bhardo
-   let phoneField = document.getElementById('c_phone');
-   if(phoneField) phoneField.value = ph;
- }
- // auto restore on load
- window.addEventListener('load',()=>{setTimeout(custSafeRestore,1200);});
- // book karte hi phone save
- let oldBook = window.book;
- if(oldBook){
-   window.book = function(){
-     let ph = document.getElementById('c_phone')?.value;
-     if(ph) localStorage.setItem('et_cust_phone',ph);
-     oldBook();
-     setTimeout(custSafeRestore,600);
+
+   // Sahi location save
+   localStorage.setItem('et_driver_live', JSON.stringify({lat:lat,lng:lng,acc:acc,time:Date.now()}));
+
+   // Map pe marker update
+   if(window.map2){
+     if(window.driverMarker) try{window.map2.removeLayer(window.driverMarker)}catch(e){}
+     window.driverMarker = L.marker([lat,lng],{
+       icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/684/684908.png',iconSize:[36,36]})
+     }).addTo(window.map2).bindPopup(`📍 Sahi Location<br>Accuracy: ${acc.toFixed(0)}m`);
+     window.map2.setView([lat,lng],16);
    }
+
+ }, err=>{
+   alert("Location ON karo + High Accuracy ON karo: "+err.message);
+ }, {
+   enableHighAccuracy: true, // Sahi location ke liye must
+   maximumAge: 0,
+   timeout: 15000
+ });
+
+ alert("✅ Live ON - Ab galat jagah nahi dikhega. Phone ko khule me rakho, building ke andar GPS jump karta hai.");
+};
+
+// 5. Customer ko bhi sirf sahi location dikhao - har 3 sec
+setInterval(()=>{
+ let live = JSON.parse(localStorage.getItem('et_driver_live')||'null');
+ if(!live) return;
+ // 2 minute se purana data ignore
+ if(Date.now() - live.time > 120000) return;
+ 
+ if(window.map){
+   if(window.customerDriverMarker) try{window.map.removeLayer(window.customerDriverMarker)}catch(e){}
+   window.customerDriverMarker = L.marker([live.lat,live.lng],{
+     icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3774/3774096.png',iconSize:[32,32]})
+   }).addTo(window.map).bindPopup("🚗 Driver Yaha Hai - Live");
  }
-})();
-</script>
+},3000);
 </body>
 </html>
