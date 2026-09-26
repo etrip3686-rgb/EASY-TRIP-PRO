@@ -559,13 +559,13 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
       } 
     });
   }
+ // FIX - isi file pe add
+window._last=null;
+window.trackMe=function(){if(window._watchId)navigator.geolocation.clearWatch(window._watchId);window._watchId=navigator.geolocation.watchPosition(p=>{if((p.coords.accuracy||99)>65)return;let la=p.coords.latitude,lo=p.coords.longitude;if(window._last&&Math.hypot((la-window._last.lat)*111000,(lo-window._last.lng)*111000)>250)return;window._last={lat:la,lng:lo};localStorage.setItem('et_driver_live',JSON.stringify({lat:la,lng:lo,time:Date.now()}));if(window.map2){if(window.driverMarker)try{map2.removeLayer(driverMarker)}catch(e){}driverMarker=L.marker([la,lo]).addTo(map2);map2.setView([la,lo],16);}},null,{enableHighAccuracy:true,maximumAge:0,timeout:15000});alert("Live ON");};
+window.drawBlueLine=(a,b,c,d,m)=>{m=m||window.map||window.map2;if(!m)return;if(window._bl)try{m.removeLayer(_bl)}catch(e){}_bl=L.polyline([[a,b],[c,d]],{color:'#1a4dff',weight:9,opacity:1}).addTo(m);m.fitBounds(_bl.getBounds(),{padding:[30,30]});};
+window.showBlue=id=>{let x=JSON.parse(localStorage.getItem('et_book')||'[]').find(y=>y.id==id);if(x)drawBlueLine(x.fromLat,x.fromLng,x.toLat,x.toLng,window.map2);};
+(function(){if(document.getElementById('etCustLogin'))return;let b=document.getElementById('customerCard')||document.querySelector('.card');if(!b)return;let d=document.createElement('div');d.id='etCustLogin';d.innerHTML='<div style="background:#0f172a;color:#fff;padding:8px;border-radius:8px;display:flex;gap:6px"><input id="et_ph" placeholder="Phone" style="width:100px"><button id="et_lg" style="background:#ffcc00;font-weight:800;border:none;padding:5px 10px;border-radius:6px">Login</button><span id="et_st"></span></div>';b.prepend(d);document.getElementById('et_lg').onclick=()=>{let p=document.getElementById('et_ph').value.trim();if(!p)return;localStorage.setItem('et_cust_phone',p);document.getElementById('et_st').innerText='✅'+p;let cp=document.getElementById('c_phone');if(cp)cp.value=p;};let ph=localStorage.getItem('et_cust_phone');if(ph){let i=document.getElementById('et_ph');if(i)i.value=ph;document.getElementById('et_st').innerText='✅'+ph;}})();
 })();
-// --- FIX ---
-let lastLat=null,lastLng=null;
-window.trackMe=function(){navigator.geolocation.watchPosition(p=>{if(p.coords.accuracy>70)return;lastLat=p.coords.latitude;lastLng=p.coords.longitude;localStorage.setItem('et_driver_live',JSON.stringify({lat:lastLat,lng:lastLng,time:Date.now()}));if(map2){if(driverMarker)try{map2.removeLayer(driverMarker)}catch(e){}driverMarker=L.marker([lastLat,lastLng]).addTo(map2);map2.setView([lastLat,lastLng],16);}},null,{enableHighAccuracy:true});alert("Live ON")};
-window.drawBlueLine=(a,b,c,d,m)=>{m=m||map||map2;if(window._bl)try{m.removeLayer(_bl)}catch(e){}_bl=L.polyline([[a,b],[c,d]],{color:'#1a4dff',weight:8,opacity:1}).addTo(m);m.fitBounds(_bl.getBounds(),{padding:[30,30]})};
-window.showBlue=id=>{let x=JSON.parse(localStorage.et_book||'[]').find(y=>y.id==id);if(x)drawBlueLine(x.fromLat,x.fromLng,x.toLat,x.toLng,map2)};
-// --- FIX END ---
 </script>
 <!-- FIREBASE CODE KHATAM -->
 </body>
