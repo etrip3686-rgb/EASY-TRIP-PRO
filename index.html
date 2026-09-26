@@ -442,8 +442,9 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
     let m=window.dmap||window.driverMap||window.map||window.amap||window.adminMap||window._map;
     if(!b||!m){alert('Map open karo pehle');return;}
     try{ if(window.EB1) m.removeLayer(window.EB1); if(window.EB2) m.removeLayer(window.EB2); }catch(e){}
-    let fromLat=b.fromLat||26.1445, fromLng=b.fromLng||91.7362, toLat=b.toLat||26.1845, toLng=b.toLng||91.8062;
-    m.setView([fromLat,fromLng],13);
+    let fromLat=b.fromLat||b.fLat, fromLng=b.fromLng||b.fLng, toLat=b.toLat||b.tLat, toLng=b.toLng||b.tLng;
+if(!fromLat||!fromLng||!toLat||!toLng){ alert('Is booking me From/To LatLng save nahi hai! Booking data: '+JSON.stringify(b).slice(0,300)); return; }
+    window.EB1=L.polyline([[fromLat,fromLng],[toLat,toLng]],{color:'#1a4dff',weight:9,opacity:1}).addTo(m);
     window.EB1=L.polyline([[fromLat,fromLng],[toLat,toLng]],{color:'blue',weight:7}).addTo(m);
     L.marker([fromLat,fromLng]).addTo(m).bindPopup('Pickup: '+getVal(b).from);
     L.marker([toLat,toLng]).addTo(m).bindPopup('Drop: '+getVal(b).to);
