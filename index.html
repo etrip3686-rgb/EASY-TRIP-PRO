@@ -560,47 +560,96 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
     });
   }
 })();
- // ===== FINAL FIX - Driver Location + Blue Line Sabko =====
-let lastLat=null,lastLng=null;
+// ===== EASY TRIP v38 FINAL - 3 IN 1 - Login + Blue + Location =====
+// 1. CUSTOMER LOGIN - Portal se gayab nahi hoga
+(function(){
+  let box = document.getElementById('customerCard') || document.querySelector('.card') || document.body;
+  if(!document.getElementById('etCustLogin')){
+    let d=document.createElement('div');
+    d.id='etCustLogin';
+    d.style='background:#0f172a;color:#fff;padding:8px 10px;border-radius:10px;display:flex;gap:6px;align-items:center;margin:8px 0;';
+    d.innerHTML='<b>👤</b><input id="et_ph" placeholder="Phone login" style="width:110px;padding:6px;border-radius:6px;border:none"><button id="et_loginBtn" style="padding:6px 10px;background:#ffcc00;border:none;border-radius:6px;font-weight:800">Login</button><span id="et_stat" style="font-size:11px;margin-left:auto"></span>';
+    box.prepend(d);
+    document.getElementById('et_loginBtn').onclick=()=>{
+      let ph=document.getElementById('et_ph').value.trim();
+      if(!ph) return alert('Phone likho');
+      localStorage.setItem('et_cust_phone',ph);
+      document.getElementById('et_stat').innerText='✅ '+ph;
+      let cp=document.getElementById('c_phone'); if(cp) cp.value=ph;
+      restoreCustBooking();
+    };
+  }
+  window.restoreCustBooking=function(){
+    let ph=localStorage.getItem('et_cust_phone');
+    if(!ph) return;
+    let ip=document.getElementById('et_ph'); if(ip) ip.value=ph;
+    let st=document.getElementById('et_stat'); if(st) st.innerText='✅ '+ph;
+    let cp=document.getElementById('c_phone'); if(cp) cp.value=ph;
+    let all=JSON.parse(localStorage.getItem('et_book')||'[]').filter(b=>b.phone==ph);
+    if(all.length==0) return;
+    let last=all[all.length-1];
+    let otp=document.getElementById('otpShow');
+    if(otp){ otp.classList.remove('hidden'); otp.style.display='block'; otp.innerHTML='✅ Last Booking<br>OTP: <b style="font-size:20px">'+last.otp+'</b><br>'+last.fromName+' → '+last.toName+'<br>'+last.price; }
+    let live=document.getElementById('liveBox'); if(live){ live.classList.remove('hidden'); live.style.display='block'; }
+  };
+  setTimeout(restoreCustBooking,1500);
+})();
+
+// 2. DRIVER LOCATION - Galat jagah jump nahi karega
+window._watchId && navigator.geolocation.clearWatch(window._watchId);
+let _lastLat=null,_lastLng=null;
 window.trackMe=function(){
- if(window._watchId) navigator.geolocation.clearWatch(window._watchId);
- window._watchId=navigator.geolocation.watchPosition(p=>{
-  let lat=p.coords.latitude,lng=p.coords.longitude,acc=p.coords.accuracy;
-  if(acc>70) return;
-  if(lastLat!==null){
-   let d=Math.sqrt(Math.pow((lat-lastLat)*111000,2)+Math.pow((lng-lastLng)*111000*Math.cos(lastLat*Math.PI/180),2));
-   if(d>300) return;
-  }
-  lastLat=lat;lastLng=lng;
-  localStorage.setItem('et_driver_live',JSON.stringify({lat,lng,time:Date.now()}));
-  if(window.map2){
-   if(window.driverMarker) try{map2.removeLayer(driverMarker)}catch(e){}
-   window.driverMarker=L.marker([lat,lng]).addTo(map2).bindPopup("📍 "+acc.toFixed(0)+"m");
-   map2.setView([lat,lng],16);
-  }
- },null,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
- alert("✅ Live ON - Sahi location");
+  if(!navigator.geolocation) return alert("GPS nahi");
+  if(window._watchId) navigator.geolocation.clearWatch(window._watchId);
+  window._watchId=navigator.geolocation.watchPosition(p=>{
+    let lat=p.coords.latitude,lng=p.coords.longitude,acc=p.coords.accuracy||100;
+    if(acc>60){ console.log("ignore bad acc",acc); return; }
+    if(_lastLat!==null){
+      let dLat=(lat-_lastLat)*111000, dLng=(lng-_lastLng)*111000*Math.cos(_lastLat*Math.PI/180);
+      let dist=Math.sqrt(dLat*dLat+dLng*dLng);
+      if(dist>250){ console.log("ignore big jump",dist); return; }
+      if(dist<40){ lat=_lastLat*0.6+lat*0.4; lng=_lastLng*0.6+lng*0.4; }
+    }
+    _lastLat=lat; _lastLng=lng;
+    localStorage.setItem('et_driver_live',JSON.stringify({lat,lng,acc,time:Date.now()}));
+    if(window.map2){
+      if(window.driverMarker) try{window.map2.removeLayer(window.driverMarker)}catch(e){}
+      window.driverMarker=L.marker([lat,lng],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/684/684908.png',iconSize:[34,34]})}).addTo(window.map2).bindPopup("📍 "+acc.toFixed(0)+"m");
+      window.map2.setView([lat,lng],16);
+    }
+  },e=>{ alert("Location High Accuracy ON karo: "+e.message); },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+  alert("✅ Live ON - Sahi location ayega");
 };
-window.drawBlueLine=function(fLa,fLo,tLa,tLo,m){
- m=m||window.map||window.map2;
- if(window._bl) try{m.removeLayer(window._bl)}catch(e){}
- _bl=L.polyline([[fLa,fLo],[tLa,tLo]],{color:'#1a4dff',weight:8,opacity:1,lineCap:'round'}).addTo(m);
- m.fitBounds(_bl.getBounds(),{padding:[40,40]});
- // road wala solid blue
- fetch(`https://router.project-osrm.org/route/v1/driving/${fLo},${fLa};${tLo},${tLa}?overview=full&geometries=geojson`)
-.then(r=>r.json()).then(d=>{
-  if(d.routes&&d.routes[0]){
-   try{m.removeLayer(_bl)}catch(e){}
-   window._bl=L.geoJSON(d.routes[0].geometry,{style:{color:'#1a4dff',weight:8,opacity:1}}).addTo(m);
-  }
- });
+
+// 3. BLUE LINE SOLID - Sabko dikhega, customer + driver
+window._blueLine=null;
+window.drawBlueLine=function(fLa,fLo,tLa,tLo,mObj){
+  let m=mObj||window.map||window.map2; if(!m) return;
+  try{ if(window._blueLine) m.removeLayer(window._blueLine); }catch(e){}
+  // turant seedhi solid blue - kabhi gayab nahi
+  window._blueLine=L.polyline([[fLa,fLo],[tLa,tLo]],{color:'#1a4dff',weight:9,opacity:1,lineCap:'round',lineJoin:'round'}).addTo(m);
+  m.fitBounds(window._blueLine.getBounds(),{padding:[50,50]});
+  // road wali solid
+  fetch(`https://router.project-osrm.org/route/v1/driving/${fLo},${fLa};${tLo},${tLa}?overview=full&geometries=geojson`)
+ .then(r=>r.json()).then(d=>{
+    if(d.routes&&d.routes[0]&&d.routes[0].geometry){
+      try{ m.removeLayer(window._blueLine); }catch(e){}
+      window._blueLine=L.geoJSON(d.routes[0].geometry,{style:{color:'#1a4dff',weight:9,opacity:1,lineCap:'round',lineJoin:'round'}}).addTo(m);
+    }
+  }).catch(()=>{});
 };
 window.showBlue=function(id){
- let b=JSON.parse(localStorage.getItem('et_book')||'[]').find(x=>x.id==id);
- if(b) drawBlueLine(b.fromLat,b.fromLng,b.toLat,b.toLng,window.map2);
+  let arr=JSON.parse(localStorage.getItem('et_book')||'[]');
+  let b=arr.find(x=>x.id==id); if(!b) return;
+  drawBlueLine(b.fromLat,b.fromLng,b.toLat,b.toLng,window.map2);
+  if(window.map) setTimeout(()=>{drawBlueLine(b.fromLat,b.fromLng,b.toLat,b.toLng,window.map)},500);
 };
 let _oldCalc=window.calc;
-window.calc=function(){if(_oldCalc)try{_oldCalc()}catch(e){} if(window.fromLL&&window.toLL) drawBlueLine(fromLL.lat,fromLL.lng,toLL.lat,toLL.lng,window.map);};
+window.calc=function(){
+  try{ if(_oldCalc) _oldCalc(); }catch(e){}
+  let fl=window.fromLL||window.fromLatLng, tl=window.toLL||window.toLatLng;
+  if(fl&&tl){ drawBlueLine(fl.lat||fl[0], fl.lng||fl[1], tl.lat||tl[0], tl.lng||tl[1], window.map); }
+};
 </script>
 <!-- FIREBASE CODE KHATAM -->
 </body>
