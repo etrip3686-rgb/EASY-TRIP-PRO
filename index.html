@@ -560,40 +560,48 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
     });
   }
 })();
-</script>
-<!-- FIREBASE CODE KHATAM -->
-// ===== DRIVER LOCATION FIX - Sahi Jagah Tikega =====
-window._watchId && navigator.geolocation.clearWatch(window._watchId);
+ // ===== FINAL FIX - Driver Location + Blue Line Sabko =====
 let lastLat=null,lastLng=null;
 window.trackMe=function(){
+ if(window._watchId) navigator.geolocation.clearWatch(window._watchId);
  window._watchId=navigator.geolocation.watchPosition(p=>{
   let lat=p.coords.latitude,lng=p.coords.longitude,acc=p.coords.accuracy;
-  if(acc>60) return;
+  if(acc>70) return;
   if(lastLat!==null){
    let d=Math.sqrt(Math.pow((lat-lastLat)*111000,2)+Math.pow((lng-lastLng)*111000*Math.cos(lastLat*Math.PI/180),2));
    if(d>300) return;
-   if(d<50){lat=lastLat*0.7+lat*0.3;lng=lastLng*0.7+lng*0.3;}
   }
   lastLat=lat;lastLng=lng;
   localStorage.setItem('et_driver_live',JSON.stringify({lat,lng,time:Date.now()}));
   if(window.map2){
    if(window.driverMarker) try{map2.removeLayer(driverMarker)}catch(e){}
-   window.driverMarker=L.marker([lat,lng]).addTo(map2).bindPopup("📍 Sahi: "+acc.toFixed(0)+"m");
+   window.driverMarker=L.marker([lat,lng]).addTo(map2).bindPopup("📍 "+acc.toFixed(0)+"m");
    map2.setView([lat,lng],16);
   }
  },null,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
- alert("✅ Live ON");
+ alert("✅ Live ON - Sahi location");
 };
-
-// BLUE LINE SABKO - Solid
 window.drawBlueLine=function(fLa,fLo,tLa,tLo,m){
- m=m||map||map2;
- if(window._bl) try{m.removeLayer(_bl)}catch(e){}
- _bl=L.polyline([[fLa,fLo],[tLa,tLo]],{color:'#1a4dff',weight:8,opacity:1}).addTo(m);
- m.fitBounds(_bl.getBounds(),{padding:[30,30]});
+ m=m||window.map||window.map2;
+ if(window._bl) try{m.removeLayer(window._bl)}catch(e){}
+ _bl=L.polyline([[fLa,fLo],[tLa,tLo]],{color:'#1a4dff',weight:8,opacity:1,lineCap:'round'}).addTo(m);
+ m.fitBounds(_bl.getBounds(),{padding:[40,40]});
+ // road wala solid blue
+ fetch(`https://router.project-osrm.org/route/v1/driving/${fLo},${fLa};${tLo},${tLa}?overview=full&geometries=geojson`)
+.then(r=>r.json()).then(d=>{
+  if(d.routes&&d.routes[0]){
+   try{m.removeLayer(_bl)}catch(e){}
+   window._bl=L.geoJSON(d.routes[0].geometry,{style:{color:'#1a4dff',weight:8,opacity:1}}).addTo(m);
+  }
+ });
+};
+window.showBlue=function(id){
+ let b=JSON.parse(localStorage.getItem('et_book')||'[]').find(x=>x.id==id);
+ if(b) drawBlueLine(b.fromLat,b.fromLng,b.toLat,b.toLng,window.map2);
 };
 let _oldCalc=window.calc;
-window.calc=function(){if(_oldCalc)try{_oldCalc()}catch(e){} if(fromLL&&toLL) drawBlueLine(fromLL.lat,fromLL.lng,toLL.lat,toLL.lng,map);};
-window.showBlue=function(id){let b=JSON.parse(localStorage.getItem('et_book')||'[]').find(x=>x.id==id); if(b) drawBlueLine(b.fromLat,b.fromLng,b.toLat,b.toLng,map2);};
+window.calc=function(){if(_oldCalc)try{_oldCalc()}catch(e){} if(window.fromLL&&window.toLL) drawBlueLine(fromLL.lat,fromLL.lng,toLL.lat,toLL.lng,window.map);};
+</script>
+<!-- FIREBASE CODE KHATAM -->
 </body>
 </html>
