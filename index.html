@@ -562,92 +562,92 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
 })();
 </script>
 <!-- FIREBASE CODE KHATAM -->
-<!-- ========== EASY TRIP FIX v37 - LAST ME ADD KARO - KUCH DELETE MAT KARO ========== -->
 <script>
-// 1. BLUE LINE SOLID FIX - purane dotted line ko solid karega
-(function(){
-const oldCalc = window.calc;
-window.calc = function(){
-if(typeof oldCalc === 'function') oldCalc();
-// sabhi dotted line hatao, solid blue banao
-setTimeout(()=>{
-document.querySelectorAll('path').forEach(p=>{
-if(p.getAttribute('stroke-dasharray')){
-p.removeAttribute('stroke-dasharray');
-p.setAttribute('stroke','#007bff');
-p.setAttribute('stroke-width','7');
-p.setAttribute('stroke-opacity','1');
-}
-});
-},300);
-};
-// Driver ki blue line bhi solid
-if(window.showBlue){
-const origShowBlue = window.showBlue;
-window.showBlue = function(id){
-origShowBlue(id);
-setTimeout(()=>{
-document.querySelectorAll('#map2 path').forEach(p=>{
-p.removeAttribute('stroke-dasharray');
-p.setAttribute('stroke','#007bff');
-p.setAttribute('stroke-width','7');
-p.setAttribute('stroke-opacity','1');
-});
-},400);
-};
-}
-})();
+// ====== EASY TRIP FINAL SAFE FIX - Blue + Login - Dashboard safe ======
+// A) BLUE LINE SOLID - purane function ko override
+window.calc = (function(orig){
+ return function(){
+  let from = window.fromLL || window.fromLatLng;
+  let to = window.toLL;
+  if(!to) return orig? orig() : null;
+  // KM calc
+  if(orig) try{orig()}catch(e){}
+  // solid blue line force
+  setTimeout(()=>{
+   try{
+    if(window.line && window.map){
+      try{map.removeLayer(line)}catch(e){}
+      window.line = L.polyline([fromLL,toLL],{color:'#0066ff',weight:8,opacity:1,lineCap:'round',lineJoin:'round'}).addTo(map);
+      // OSRM road bhi solid
+      fetch(`https://router.project-osrm.org/route/v1/driving/${fromLL.lng},${fromLL.lat};${toLL.lng},${toLL.lat}?overview=full&geometries=geojson`)
+     .then(r=>r.json()).then(d=>{
+        if(d.routes && d.routes[0]){
+          try{map.removeLayer(line)}catch(e){}
+          window.line = L.geoJSON(d.routes[0].geometry,{style:{color:'#0066ff',weight:8,opacity:1}}).addTo(map);
+          map.fitBounds(window.line.getBounds(),{padding:[30,30]});
+        }
+      });
+    }
+   }catch(e){console.log(e)}
+  },200);
+ }
+})(window.calc);
 
-// 2. CUSTOMER LOGIN - REFRESH PE BOOKING GAYAB NAHI HOGI - DASHBOARD BLOCK NAHI KAREGA
+// B) CUSTOMER LOGIN - booking refresh pe gayab nahi hogi - portal se hatayega nahi
 (function(){
-if(document.getElementById('custLoginPatch')) return;
-let bar = document.createElement('div');
-bar.id = 'custLoginPatch';
-bar.style = 'position:fixed;top:6px;left:6px;right:6px;z-index:99999;background:#0f172a;color:#fff;padding:8px 10px;border-radius:12px;display:flex;gap:6px;align-items:center;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.3)';
-bar.innerHTML = '<span>👤</span><input id="custPh" placeholder="Phone" style="width:95px;padding:6px 8px;border-radius:8px;border:none;outline:none"><button id="custLoginBtn" style="padding:6px 10px;border-radius:8px;background:#ffcc00;font-weight:900;border:none;cursor:pointer">Login</button><span id="custStat" style="margin-left:auto;font-size:11px;opacity:.9">Not Login</span>';
-document.body.prepend(bar);
-
-function doCustLogin(){
-let ph = document.getElementById('custPh').value.trim();
-if(!ph) return alert('Phone likho');
-localStorage.setItem('et_cust_phone',ph);
-document.getElementById('custStat').innerText='✅ '+ph;
-alert('Login ho gaya: '+ph+' - Ab refresh pe booking gayab nahi hogi');
-restoreCust();
-}
-function doCustRestore(){
-let ph = localStorage.getItem('et_cust_phone');
-if(!ph) return;
-document.getElementById('custPh').value = ph;
-document.getElementById('custStat').innerText='✅ '+ph;
-let all = JSON.parse(localStorage.getItem('et_book')||'[]').filter(b=>b.phone==ph);
-if(all.length===0) return;
-let last = all[all.length-1];
-// OTP + liveBox wapas lao
-let otpDiv = document.getElementById('otpShow');
-let liveBox = document.getElementById('liveBox');
-if(otpDiv && last.status!=='completed'){
-otpDiv.classList.remove('hidden');
-otpDiv.innerHTML='✅ Last Booking Restore<br>OTP: <b style="font-size:20px">'+last.otp+'</b><br>'+last.fromName+' → '+last.toName+'<br>'+last.price+' | '+last.status;
-}
-if(liveBox && last.status!=='completed'){
-liveBox.classList.remove('hidden');
-}
-}
-document.getElementById('custLoginBtn').onclick = doCustLogin;
-window.addEventListener('load',()=>{ setTimeout(doCustRestore,1000); });
-// booking function ko wrap karo taki phone auto save ho
-const oldBook = window.book;
-if(oldBook){
-window.book = function(){
-let phInput = document.getElementById('c_phone');
-if(phInput && phInput.value) localStorage.setItem('et_cust_phone',phInput.value);
-oldBook();
-setTimeout(doCustRestore,500);
-};
-}
+ // login UI - customer card ke andar dalo, fixed nahi
+ let card = document.querySelector('.card') || document.body;
+ if(!document.getElementById('custLoginSafe')){
+   let div = document.createElement('div');
+   div.id='custLoginSafe';
+   div.style='background:#0f172a;color:#fff;padding:8px 10px;border-radius:10px;display:flex;gap:6px;align-items:center;margin-bottom:8px';
+   div.innerHTML='<span>👤</span><input id="c_phone_login" placeholder="Phone" style="width:100px;padding:6px;border-radius:6px;border:none"><button onclick="custSafeLogin()" style="padding:6px 10px;background:#ffcc00;border:none;border-radius:6px;font-weight:800">Login</button><span id="c_login_stat" style="font-size:11px;margin-left:auto"></span>';
+   card.prepend(div);
+ }
+ window.custSafeLogin = function(){
+   let ph = document.getElementById('c_phone_login').value || document.getElementById('c_phone')?.value;
+   if(!ph) return alert('Phone likho');
+   localStorage.setItem('et_cust_phone',ph);
+   document.getElementById('c_login_stat').innerText='✅ '+ph;
+   custSafeRestore();
+ }
+ window.custSafeRestore = function(){
+   let ph = localStorage.getItem('et_cust_phone');
+   if(!ph) return;
+   let inp = document.getElementById('c_phone_login'); if(inp) inp.value=ph;
+   let stat = document.getElementById('c_login_stat'); if(stat) stat.innerText='✅ '+ph;
+   let all = JSON.parse(localStorage.getItem('et_book')||'[]').filter(b=>b.phone==ph);
+   if(all.length==0) return;
+   let last = all[all.length-1];
+   // OTP div ko HATANA NAHI, dikhana hai
+   let otpDiv = document.getElementById('otpShow');
+   if(otpDiv){
+     otpDiv.classList.remove('hidden');
+     otpDiv.style.display='block';
+     otpDiv.innerHTML='✅ Booking Hai - OTP: <b style="font-size:20px">'+last.otp+'</b><br>'+last.fromName+' → '+last.toName+'<br>'+last.price+' | '+last.status;
+   }
+   let liveBox = document.getElementById('liveBox');
+   if(liveBox && last.status!=='completed'){
+     liveBox.classList.remove('hidden');
+     liveBox.style.display='block';
+   }
+   // phone input me bhi bhardo
+   let phoneField = document.getElementById('c_phone');
+   if(phoneField) phoneField.value = ph;
+ }
+ // auto restore on load
+ window.addEventListener('load',()=>{setTimeout(custSafeRestore,1200);});
+ // book karte hi phone save
+ let oldBook = window.book;
+ if(oldBook){
+   window.book = function(){
+     let ph = document.getElementById('c_phone')?.value;
+     if(ph) localStorage.setItem('et_cust_phone',ph);
+     oldBook();
+     setTimeout(custSafeRestore,600);
+   }
+ }
 })();
 </script>
-<!-- ========== FIX END ========== -->
 </body>
 </html>
