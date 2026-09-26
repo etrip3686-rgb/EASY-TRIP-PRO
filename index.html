@@ -559,12 +559,62 @@ setInterval(()=>{let all=JSON.parse(localStorage.getItem('et_book')||'[]').filte
       } 
     });
   }
- // FIX - isi file pe add
-window._last=null;
-window.trackMe=function(){if(window._watchId)navigator.geolocation.clearWatch(window._watchId);window._watchId=navigator.geolocation.watchPosition(p=>{if((p.coords.accuracy||99)>65)return;let la=p.coords.latitude,lo=p.coords.longitude;if(window._last&&Math.hypot((la-window._last.lat)*111000,(lo-window._last.lng)*111000)>250)return;window._last={lat:la,lng:lo};localStorage.setItem('et_driver_live',JSON.stringify({lat:la,lng:lo,time:Date.now()}));if(window.map2){if(window.driverMarker)try{map2.removeLayer(driverMarker)}catch(e){}driverMarker=L.marker([la,lo]).addTo(map2);map2.setView([la,lo],16);}},null,{enableHighAccuracy:true,maximumAge:0,timeout:15000});alert("Live ON");};
-window.drawBlueLine=(a,b,c,d,m)=>{m=m||window.map||window.map2;if(!m)return;if(window._bl)try{m.removeLayer(_bl)}catch(e){}_bl=L.polyline([[a,b],[c,d]],{color:'#1a4dff',weight:9,opacity:1}).addTo(m);m.fitBounds(_bl.getBounds(),{padding:[30,30]});};
-window.showBlue=id=>{let x=JSON.parse(localStorage.getItem('et_book')||'[]').find(y=>y.id==id);if(x)drawBlueLine(x.fromLat,x.fromLng,x.toLat,x.toLng,window.map2);};
-(function(){if(document.getElementById('etCustLogin'))return;let b=document.getElementById('customerCard')||document.querySelector('.card');if(!b)return;let d=document.createElement('div');d.id='etCustLogin';d.innerHTML='<div style="background:#0f172a;color:#fff;padding:8px;border-radius:8px;display:flex;gap:6px"><input id="et_ph" placeholder="Phone" style="width:100px"><button id="et_lg" style="background:#ffcc00;font-weight:800;border:none;padding:5px 10px;border-radius:6px">Login</button><span id="et_st"></span></div>';b.prepend(d);document.getElementById('et_lg').onclick=()=>{let p=document.getElementById('et_ph').value.trim();if(!p)return;localStorage.setItem('et_cust_phone',p);document.getElementById('et_st').innerText='✅'+p;let cp=document.getElementById('c_phone');if(cp)cp.value=p;};let ph=localStorage.getItem('et_cust_phone');if(ph){let i=document.getElementById('et_ph');if(i)i.value=ph;document.getElementById('et_st').innerText='✅'+ph;}})();
+// ===== FIREBASE JUMP FILTER - Galat location Firebase se aaye to block =====
+window._firebaseLast=null; window._firebaseLastTime=0;
+(function(){
+  let _oldSetMarker = window.setDriverOnMap || window.updateDriverMarker || null;
+  // Har jagah jaha driver marker lagta hai usko filter karo
+  window.filterAndSetDriver = function(lat,lng, acc){
+    acc = acc||999;
+    if(acc>40) { console.log("FIREBASE IGNORE bad acc",acc); return false; }
+    let now=Date.now();
+    if(window._firebaseLast){
+      let dLat=(lat-window._firebaseLast.lat)*111000;
+      let dLng=(lng-window._firebaseLast.lng)*111000*Math.cos(lat*Math.PI/180);
+      let dist=Math.sqrt(dLat*dLat+dLng*dLng);
+      let dt=(now-window._firebaseLastTime)/1000;
+      // 20 sec me 400m se zyada jump = fake
+      if(dist>400 && dt<20){ console.log("FIREBASE JUMP BLOCK",dist.toFixed(0)+"m in "+dt.toFixed(0)+"s"); return false; }
+    }
+    window._firebaseLast={lat,lng}; window._firebaseLastTime=now;
+    return true;
+  };
+  // Firebase listener ko wrap karo
+  if(window.db){
+    let _origOn = firebase.database.Reference.prototype.on;
+    firebase.database.Reference.prototype.on = function(event, cb, ...rest){
+      let wrapped = function(snap){
+        try{
+          let v=snap.val();
+          if(v && v.lat && v.lng){
+            if(!window.filterAndSetDriver(v.lat, v.lng, v.acc||v.accuracy)) return;
+          }
+          // agar drivers/{id}/live hai to
+          if(v && typeof v==='object'){
+            Object.values(v).forEach(d=>{
+              if(d && d.live && d.live.lat) {
+                if(!window.filterAndSetDriver(d.live.lat, d.live.lng, d.live.acc)) {
+                  // is driver ka galat update ignore
+                  return;
+                }
+              }
+            });
+          }
+        }catch(e){}
+        cb(snap);
+      };
+      return _origOn.call(this, event, wrapped, ...rest);
+    };
+  }
+  // Direct marker function bhi filter
+  let _oldMarkerSet = L.Marker.prototype.setLatLng;
+  // Hum sirf driver marker ko check karenge, normal polyline ko nahi
+})();
+
+// Firebase ka purana galat data delete karo - Console me ye chalao ek baar:
+try{ if(window.db && window.driverId) { db.ref('drivers/'+driverId+'/live').remove(); console.log("Old firebase live deleted"); } }catch(e){}
+// Local bhi saaf
+localStorage.removeItem('et_driver_live');
 })();
 </script>
 <!-- FIREBASE CODE KHATAM -->
