@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>ASSAM EASY TRIP - v33.9 AUTO UPDATE ULTIMATE</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>*{font-family:'Poppins',sans-serif}.blue-dot-route{stroke-dasharray:8 12;}</style>
+</head>
+<body class="bg-slate-100 text-slate-900">
+<!-- AUTO UPDATE MODAL - PEHLE SE -->
+<div id="updateModal" class="hidden fixed inset-0 z-[99999] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4">
+<div class="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-yellow-400 shadow-2xl text-center space-y-4">
+<div class="text-4xl">🚀</div>
+<h2 class="text-lg font-black">Naya Update Aaya Hai! <span id="newVerText"></span></h2>
+<p class="text-xs text-slate-600">Blue Dotted + No Kharghuli + Firebase Live Fix</p>
+<div class="bg-yellow-400/20 border-2 border-yellow-400 rounded-xl p-2 text-[11px] font-bold">Bokakhat Golaghat | 8638803320 | Auto Update Active</div>
+<div class="flex gap-2"><button onclick="document.getElementById('updateModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 rounded-xl text-xs font-bold">Baad Me</button><button onclick="doApkUpdate()" class="flex-1 py-3 bg-yellow-400 border-2 border-slate-900 rounded-xl font-black text-xs">⬇️ Update Karo</button></div>
+</div>
+</div>
+<header class="sticky top-0 z-[1000] bg-slate-950 text-white border-b-2 border-yellow-400">
+<div class="max-w-6xl mx-auto px-3 py-3 flex justify-between items-center">
+<div id="logoTap" class="flex gap-2 items-center cursor-pointer"><div class="w-9 h-9 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center font-black">🚖</div><div><div class="font-black text-sm"><span class="text-yellow-400">ASSAM</span> EASY TRIP <span class="text-[8px] bg-yellow-400/20 px-1 rounded">v33.9 AUTO</span></div><div class="text-[10px] text-slate-400">Ultimate + Auto Update • No Kharghuli</div></div></div>
+<div class="flex gap-2"><button id="apkBtn" class="px-3 py-1.5 bg-emerald-600 rounded-xl text-xs font-black">⬇️ APK</button><button onclick="downloadExcel('bookings')" class="px-3 py-1.5 bg-blue-600 rounded-xl text-xs font-black">📥 Excel</button></div>
+</div>
+<div class="max-w-6xl mx-auto px-3 pb-2 flex gap-1 bg-slate-900 p-1 rounded-2xl border">
+<button onclick="switchTab('customer')" id="tab-customer" class="flex-1 py-1.5 rounded-xl bg-yellow-400 text-slate-950 text-xs font-black">👤 Customer</button>
+<button onclick="switchTab('driver')" id="tab-driver" class="flex-1 py-1.5 rounded-xl text-slate-400 text-xs font-black">🚗 Driver</button>
+<button onclick="switchTab('admin')" id="tab-admin" class="hidden flex-1 py-1.5 rounded-xl text-yellow-400 text-xs font-black">⚙️ Admin Ultimate</button>
+</div>
+</header>
+<main class="max-w-6xl mx-auto p-3 pt-4 space-y-4">
+<div id="view-customer" class="space-y-4">
+<div class="bg-white rounded-2xl p-3 border-2 border-slate-900 flex justify-between items-center"><div class="flex gap-2 items-center"><div class="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center font-black">👤</div><div><div class="text-xs font-bold text-slate-500">Customer Portal</div><div class="text-sm font-extrabold">Bokakhat Default • Blue Dot + Firebase + Auto Update</div></div></div><span class="text-[10px] bg-emerald-100 px-2 py-1 rounded-full font-black">Firebase Live</span></div>
+<div id="activeCard" class="hidden bg-slate-900 text-white rounded-3xl p-4 border-2 border-yellow-400 space-y-3"></div>
+<div id="bookingForm" class="bg-white rounded-3xl p-4 border-2 border-slate-900 space-y-3 shadow-md">
+<div id="map" style="height:300px" class="rounded-2xl border-2 border-slate-900"></div>
+<div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-black"><button id="m-from" onclick="setMode('from')" class="flex-1 py-1 rounded-lg bg-emerald-600 text-white">🟢 Pickup</button><button id="m-to" onclick="setMode('to')" class="flex-1 py-1 rounded-lg">🏁 Drop</button><button onclick="useMyLocation()" class="flex-1 py-1 rounded-lg bg-slate-900 text-yellow-400">📍 GPS</button></div>
+<div id="quick" class="flex flex-wrap gap-1"></div>
+<div class="relative"><input id="fromI" placeholder="From: Bokakhat Town" class="w-full border-2 rounded-xl py-3 px-3 text-sm font-semibold"/><div id="sFrom" class="hidden absolute z-50 bg-white border-2 rounded-xl w-full max-h-32 overflow-auto shadow-xl"></div></div>
+<div class="relative"><input id="toI" placeholder="To: Golaghat Town" class="w-full border-2 rounded-xl py-3 px-3 text-sm font-semibold"/><div id="sTo" class="hidden absolute z-50 bg-white border-2 rounded-xl w-full max-h-32 overflow-auto shadow-xl"></div></div>
+<div id="vehGrid" class="grid grid-cols-3 sm:grid-cols-6 gap-2"></div>
+<div class="bg-slate-900 text-yellow-400 p-4 rounded-2xl flex justify-between items-center border-2 border-yellow-400/40"><div><div id="fInfo" class="text-sm font-bold text-white">0 KM</div><div class="text-[10px] text-yellow-400/70">Base ₹<span id="baseFareShow">40</span> included</div></div><div id="fPrice" class="text-3xl font-black">₹0</div></div>
+<div class="grid grid-cols-2 gap-2"><input id="cPhone" placeholder="Phone *" class="border-2 rounded-xl py-2.5 px-3 text-sm font-semibold"/><input id="cName" placeholder="Name *" class="border-2 rounded-xl py-2.5 px-3 text-sm font-semibold"/></div>
+<button onclick="createBooking()" class="w-full py-4 bg-yellow-400 border-2 border-slate-950 rounded-2xl font-black shadow-lg">✅ Book Ride + OTP + Auto Update</button>
+</div>
+</div><div id="view-driver" class="hidden space-y-4">
+<div class="bg-white rounded-3xl p-5 border-2 border-slate-900 space-y-4">
+<h2 class="font-black text-lg">🚗 Driver Portal - FULL + QR + Map + Auto Update</h2>
+<div id="driverLoginBox" class="space-y-2">
+<input id="dPhone" placeholder="Driver Phone 9876543210" class="w-full border-2 rounded-xl py-2.5 px-3"/><input id="dPass" type="password" placeholder="Pass 1234" class="w-full border-2 rounded-xl py-2.5 px-3"/>
+<button onclick="driverLogin()" class="w-full py-3 bg-slate-900 text-yellow-400 rounded-xl font-black">Login Driver</button>
+<p class="text-[10px] text-slate-500">Duty On/Off + Live GPS + Admin QR Code</p>
+</div>
+<div id="dPanel" class="hidden space-y-4">
+<div class="bg-slate-900 text-white rounded-2xl p-3 flex justify-between items-center">
+<div class="flex gap-3 items-center"><img id="dPhoto" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" class="w-12 h-12 rounded-full border-2 border-yellow-400 object-cover"/><div><div class="font-black" id="dName">Raju Sharma</div><div class="text-xs text-slate-400" id="dVehInfo">AS 05 AB 4589 • Bike</div><div class="text-[10px] text-emerald-400">⭐ 4.9 Verified</div></div></div>
+<div class="text-center"><div class="text-xs">Duty</div><button id="dutyBtn" onclick="toggleDuty()" class="w-14 h-7 rounded-full bg-emerald-500 relative mt-1"><div id="dutyDot" class="w-6 h-6 bg-white rounded-full absolute top-0.5 left-7 transition"></div></button><div class="text-[10px] mt-1" id="dutyText">ON</div></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div><div class="text-xs font-black mb-1">🗺️ Live Driver Map (Bokakhat Default)</div><div id="dLiveMap" style="height:260px" class="rounded-2xl border-2 border-slate-900"></div></div>
+<div class="space-y-3">
+<div class="bg-white border-2 rounded-2xl p-3 text-center"><div class="text-xs font-bold">Admin Payment QR Code - Auto Update</div><img id="driverQR" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=admin@upi" class="w-32 h-32 mx-auto mt-2 border rounded-xl"/><div class="text-[11px] mt-1">UPI: <span id="driverUPI" class="font-bold">admin@upi</span></div><div class="text-[10px] text-slate-500" id="qrNote">Driver Daily 200 Monthly 4000</div></div>
+<div class="grid grid-cols-2 gap-2 text-xs"><div class="bg-emerald-50 border-2 p-3 rounded-xl text-center"><div class="text-[10px]">Today Earn</div><div class="font-black text-lg" id="todayEarn">₹0</div></div><div class="bg-blue-50 border-2 p-3 rounded-xl text-center"><div class="text-[10px]">Rides Done</div><div class="font-black text-lg" id="todayRides">0</div></div></div>
+</div>
+</div>
+<div id="dActiveRide" class="hidden bg-slate-900 text-white rounded-2xl p-3 space-y-2 border-2 border-yellow-400"></div>
+<div id="dList" class="space-y-2"></div>
+</div>
+</div>
+</div>
+
+<div id="view-admin" class="hidden space-y-4">
+<div class="bg-white rounded-3xl p-5 border-2 border-slate-900 space-y-4">
+<div class="flex justify-between items-center"><h2 class="font-black text-xl">⚙️ Admin Ultimate + Auto Update</h2><span class="text-[10px] bg-slate-900 text-yellow-400 px-2 py-1 rounded-full">5-Tap Unlocked</span></div>
+<div id="adminLoginBox" class="space-y-2 border p-3 rounded-2xl bg-slate-50">
+<input id="aUser" placeholder="User: admin" class="w-full border-2 rounded-xl py-2 px-3"/><input id="aPass" type="password" placeholder="Pass: admin123" class="w-full border-2 rounded-xl py-2 px-3"/>
+<button onclick="adminLogin()" class="w-full py-2.5 bg-slate-900 text-yellow-400 rounded-xl font-black">Login Admin</button>
+</div>
+<div id="aPanel" class="hidden space-y-6">
+<div class="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-black">
+<button onclick="switchAdminTab('overview')" id="atab-overview" class="py-1.5 px-3 rounded-lg bg-slate-900 text-yellow-400">Overview</button>
+<button onclick="switchAdminTab('vehicles')" id="atab-vehicles" class="py-1.5 px-3 rounded-lg">Vehicles + Commission</button>
+<button onclick="switchAdminTab('payment')" id="atab-payment" class="py-1.5 px-3 rounded-lg">QR + UPI + Payments</button>
+<button onclick="switchAdminTab('bookings')" id="atab-bookings" class="py-1.5 px-3 rounded-lg">Bookings + Excel</button>
+<button onclick="switchAdminTab('drivers')" id="atab-drivers" class="py-1.5 px-3 rounded-lg">Drivers Approval</button>
+<button onclick="switchAdminTab('settings')" id="atab-settings" class="py-1.5 px-3 rounded-lg">Head Office + APK Auto</button>
+<button onclick="switchAdminTab('maps')" id="atab-maps" class="py-1.5 px-3 rounded-lg">Live Maps</button>
+</div>
+
+<div id="admin-overview" class="space-y-3">
+<div class="grid grid-cols-3 gap-2 text-xs"><div class="bg-blue-50 border-2 p-3 rounded-xl text-center"><div>Total Bookings</div><div class="font-black text-xl" id="statBookings">0</div></div><div class="bg-emerald-50 border-2 p-3 rounded-xl text-center"><div>Total Drivers</div><div class="font-black text-xl" id="statDrivers">0</div></div><div class="bg-yellow-50 border-2 p-3 rounded-xl text-center"><div>Pending</div><div class="font-black text-xl" id="statPending">0</div></div></div>
+<div class="bg-slate-900 text-yellow-400 p-3 rounded-xl text-xs">Firebase: easy-trip-d601a • Bokakhat 26.6247,93.6035 • Esri Map + OSRM + Auto Update Active</div>
+</div><div id="admin-vehicles" class="hidden space-y-3">
+<div class="flex justify-between items-center"><h3 class="font-black">🚗 Vehicles + Commission Control</h3><button onclick="openVehModal()" class="px-3 py-1.5 bg-yellow-400 border-2 border-slate-900 rounded-xl text-xs font-black">+ Add Vehicle</button></div>
+<div id="vehAdminList" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+<div class="bg-slate-50 border-2 rounded-2xl p-3 space-y-2">
+<h4 class="font-black text-xs">💰 Commission Settings (Auto Update to APK)</h4>
+<div class="grid grid-cols-2 gap-2">
+<div><label class="text-[10px] font-bold">Daily Commission ₹</label><input id="dailyComm" type="number" value="200" class="w-full border-2 rounded-lg py-1.5 px-2 text-xs"/></div>
+<div><label class="text-[10px] font-bold">Monthly Commission ₹</label><input id="monthlyComm" type="number" value="4000" class="w-full border-2 rounded-lg py-1.5 px-2 text-xs"/></div>
+</div>
+<button onclick="saveCommission()" class="w-full py-2 bg-emerald-600 text-white rounded-xl font-black text-xs">Save Commission - APK Auto Update</button>
+</div>
+</div>
+
+<div id="admin-payment" class="hidden space-y-3">
+<h3 class="font-black">💳 QR Code + UPI + Payment Note Control</h3>
+<div class="bg-slate-50 border-2 rounded-2xl p-3 space-y-3">
+<div><label class="text-[10px] font-bold">UPI ID (Admin will get money)</label><input id="setUpi" placeholder="admin@upi / 8638803320@ybl" class="w-full border-2 rounded-xl py-2 px-3 text-xs"/></div>
+<div><label class="text-[10px] font-bold">QR Code Image URL (Upload to imgur.com)</label><input id="setQrUrl" placeholder="https://i.imgur.com/xxx.png" class="w-full border-2 rounded-xl py-2 px-3 text-xs"/></div>
+<div><label class="text-[10px] font-bold">QR Note for Driver (Daily/Monthly)</label><input id="setQrNote" placeholder="Daily 200 | Monthly 4000 | Pay to activate" class="w-full border-2 rounded-xl py-2 px-3 text-xs"/></div>
+<button onclick="savePaymentSettings()" class="w-full py-2.5 bg-slate-900 text-yellow-400 rounded-xl font-black text-xs">💾 Save QR + UPI - Driver App Auto Update</button>
+<p class="text-[10px] text-slate-500">Save karte hi Driver Portal me naya QR + UPI turant dikhega - Firebase Live!</p>
+</div>
+<div class="bg-white border-2 rounded-2xl p-3 text-center"><div class="text-xs font-bold">Live Preview</div><img id="adminQrPreview" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay" class="w-24 h-24 mx-auto mt-2 border rounded-xl"/></div>
+</div>
+
+<div id="admin-bookings" class="hidden space-y-3">
+<div class="flex justify-between items-center"><h3 class="font-black">📋 All Bookings + Amount Edit + Excel</h3><button onclick="downloadExcel('bookings')" class="px-3 py-1 bg-blue-600 text-white rounded-xl text-xs font-black">📥 Download Excel</button></div>
+<div id="bookingAdminList" class="space-y-2 max-h-[400px] overflow-auto border-2 rounded-xl p-2 bg-slate-50"></div>
+</div>
+
+<div id="admin-drivers" class="hidden space-y-3">
+<h3 class="font-black">👥 Driver Approval + Duty Status</h3>
+<div class="flex gap-2 text-xs"><button onclick="filterDrivers('all')" class="px-3 py-1 bg-slate-900 text-white rounded-lg">All</button><button onclick="filterDrivers('pending')" class="px-3 py-1 bg-yellow-400 rounded-lg">Pending</button><button onclick="filterDrivers('approved')" class="px-3 py-1 bg-emerald-500 text-white rounded-lg">Approved</button></div>
+<div id="driverAdminList" class="space-y-2 max-h-[400px] overflow-auto border-2 rounded-xl p-2 bg-slate-50"></div>
+</div>
+
+<div id="admin-settings" class="hidden space-y-3">
+<h3 class="font-black">⚙️ Head Office + Theme + APK Auto Update Settings</h3>
+<div class="bg-slate-50 border-2 rounded-2xl p-3 space-y-3">
+<div class="grid grid-cols-2 gap-2">
+<div><label class="text-[10px] font-bold">Office Name</label><input id="setOfficeName" placeholder="ASSAM EASY TRIP" class="w-full border-2 rounded-lg py-1.5 px-2 text-xs"/></div>
+<div><label class="text-[10px] font-bold">Helpline Phone</label><input id="setPhone" placeholder="8638803320 / 7002754262" class="w-full border-2 rounded-lg py-1.5 px-2 text-xs"/></div>
+</div>
+<div><label class="text-[10px] font-bold">Office Address</label><input id="setAddress" placeholder="Bokakhat, Golaghat, Assam pin 785612" class="w-full border-2 rounded-lg py-1.5 px-2 text-xs"/></div>
+<div class="grid grid-cols-3 gap-2">
+<div><label class="text-[10px] font-bold">Base Fare ₹</label><input id="setBaseFare" type="number" value="40" class="w-full border-2 rounded-lg py-1.5 px-2 text-xs"/></div>
+<div><label class="text-[10px] font-bold">Primary Color</label><input id="setPrimaryColor" type="color" value="#facc15" class="w-full h-8 border-2 rounded-lg"/></div>
+<div><label class="text-[10px] font-bold">Theme Dark</label><input id="setDarkColor" type="color" value="#0f172a" class="w-full h-8 border-2 rounded-lg"/></div>
+</div>
+<div class="bg-yellow-400/20 border-2 border-yellow-400 rounded-xl p-3 space-y-2">
+<div class="font-black text-xs">🚀 APK Auto Update Control</div>
+<div><label class="text-[10px] font-bold">APK Version (Badao to Auto Update Trigger)</label><input id="setApkVersion" type="number" step="0.1" value="33.9" class="w-full border-2 rounded-lg py-1.5 px-2 text-xs font-black"/></div>
+<div><label class="text-[10px] font-bold">APK Download Link (Drive Link)</label><input id="setApkLink" placeholder="https://drive.google.com/..." class="w-full border-2 rounded-lg py-1.5 px-2 text-xs"/></div>
+<p class="text-[10px] text-slate-600">Version badhaoge to sab APK me 1 min me "Naya Update Aaya Hai!" popup ayega + direct download!</p>
+</div>
+<button onclick="saveSettings()" class="w-full py-2.5 bg-slate-900 text-yellow-400 rounded-xl font-black text-xs">💾 Save All Settings + Trigger Auto Update</button>
+</div>
+</div>
+
+<div id="admin-maps" class="hidden space-y-3">
+<h3 class="font-black">🗺️ Live Maps - Admin + Driver Tracking</h3>
+<div id="adminMap" style="height:350px" class="rounded-2xl border-2 border-slate-900"></div>
+<div class="bg-slate-900 text-yellow-400 p-2 rounded-xl text-[10px]">Esri World Street Map + OSRM Blue Dotted Route + Live drivers_live + Bokakhat 26.6247,93.6035 Default • No Kharghuli</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+<div id="vehModal" class="hidden fixed inset-0 z-[9999] bg-slate-950/80 flex items-center justify-center p-4">
+<div class="bg-white rounded-3xl p-5 w-full max-w-sm border-2 border-slate-900 space-y-3">
+<h3 class="font-black">Add / Edit Vehicle</h3>
+<input id="vehId" type="hidden"/><input id="vehName" placeholder="Name e.g. Auto" class="w-full border-2 rounded-xl py-2 px-3 text-xs"/><input id="vehIcon" placeholder="Icon e.g. 🛺" class="w-full border-2 rounded-xl py-2 px-3 text-xs"/><input id="vehRate" type="number" placeholder="Rate per KM e.g. 12" class="w-full border-2 rounded-xl py-2 px-3 text-xs"/><input id="vehCap" type="number" placeholder="Capacity e.g. 3" class="w-full border-2 rounded-xl py-2 px-3 text-xs"/>
+<div class="flex gap-2"><button onclick="closeVehModal()" class="flex-1 py-2 bg-slate-100 rounded-xl text-xs font-bold">Cancel</button><button onclick="saveVehicle()" class="flex-1 py-2 bg-yellow-400 border-2 border-slate-900 rounded-xl text-xs font-black">Save - APK Auto Update</button></div>
+</div>
+</div>
+
+<footer class="bg-slate-900 text-slate-400 text-xs py-6 text-center mt-6 border-t-2 border-yellow-400/30">
+<div class="font-black text-white">ASSAM EASY TRIP v33.9 AUTO UPDATE ULTIMATE</div>
+<div>Bokakhat, Golaghat, Assam pin 785612 | Helpline 8638803320 / 7002754262 | No Kharghuli Default 26.6247,93.6035</div>
+<div class="text-[10px]">Blue Dot + Esri + OSRM + Firebase Live + Auto Update + Excel Download + Full Admin</div>
+</footer><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue, set, push, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD_placeholder",
+  authDomain: "easy-trip-d601a.firebaseapp.com",
+  databaseURL: "https://easy-trip-d601a-default-rtdb.firebaseio.com",
+  projectId: "easy-trip-d601a",
+  storageBucket: "easy-trip-d601a.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ===== AUTO UPDATE LOGIC - PEHLE SE =====
+let NEW_APK_LINK='', NEW_VER=0;
+window.doApkUpdate = function(){ if(NEW_APK_LINK) window.open(NEW_APK_LINK,'_blank'); else window.open(CFG.apkLink,'_blank'); }
+function checkAutoUpdate(remoteCfg){
+  try{
+    const localVer = parseFloat(localStorage.getItem('apk_ver')||'33.2');
+    const rv = parseFloat(remoteCfg.apkVersion||'33.2');
+    console.log('Auto Update Check:', localVer, '->', rv);
+    if(rv > localVer && remoteCfg.apkLink){
+      NEW_APK_LINK = remoteCfg.apkLink; NEW_VER = rv;
+      const el=document.getElementById('newVerText'); if(el) el.innerText='v'+rv;
+      const mod=document.getElementById('updateModal'); if(mod) mod.classList.remove('hidden');
+    }
+  }catch(e){ console.warn(e); }
+}
+
+// ===== DEFAULT CONFIG - Bokakhat - No Kharghuli =====
+window.CFG = JSON.parse(localStorage.getItem('et_cfg_v33_9')||'null') || {
+  baseFare: 40,
+  vehicles: [
+    {id:'bike', name:'Bike', icon:'🏍️', rate:10, capacity:1},
+    {id:'auto', name:'Auto', icon:'🛺', rate:12, capacity:3},
+    {id:'mini', name:'Mini', icon:'🚗', rate:15, capacity:4},
+    {id:'sedan', name:'Sedan', icon:'🚙', rate:18, capacity:4},
+    {id:'suv', name:'SUV', icon:'🚐', rate:22, capacity:6},
+    {id:'traveller', name:'Traveller', icon:'🚌', rate:30, capacity:12}
+  ],
+  upi: '8638803320@ybl',
+  qrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=8638803320@ybl',
+  qrNote: 'Daily ₹200 | Monthly ₹4000 | Pay to activate driver',
+  apkVersion: 33.9,
+  apkLink: 'https://drive.google.com/file/d/1_sample_link/view',
+  dailyCommission: 200,
+  monthlyCommission: 4000,
+  adminDetails: {name:'ASSAM EASY TRIP', phone:'8638803320 / 7002754262', address:'Bokakhat, Golaghat, Assam pin 785612'},
+  themeColor: '#facc15',
+  darkColor: '#0f172a',
+  logoText: 'ASSAM EASY TRIP'
+};
+
+let map, markerFrom, markerTo, routeLine, dMap, adminMap;
+let mode='from', selectedVeh='bike', fromCoords=null, toCoords=null, distanceKm=0;
+const BOKAKHAT = [26.6247, 93.6035]; // Fixed - No Kharghuli
+
+function initMaps(){
+  map = L.map('map').setView(BOKAKHAT, 12);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}').addTo(map);
+  map.on('click', (e)=>{
+    if(mode==='from'){ fromCoords=[e.latlng.lat, e.latlng.lng]; if(markerFrom) map.removeLayer(markerFrom); markerFrom=L.marker(e.latlng).addTo(map).bindPopup('Pickup').openPopup(); document.getElementById('fromI').value=e.latlng.lat.toFixed(4)+','+e.latlng.lng.toFixed(4); }
+    else{ toCoords=[e.latlng.lat, e.latlng.lng]; if(markerTo) map.removeLayer(markerTo); markerTo=L.marker(e.latlng).addTo(map).bindPopup('Drop').openPopup(); document.getElementById('toI').value=e.latlng.lat.toFixed(4)+','+e.latlng.lng.toFixed(4); }
+    calcRoute();
+  });
+  dMap = L.map('dLiveMap').setView(BOKAKHAT, 12);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}').addTo(dMap);
+  adminMap = L.map('adminMap').setView(BOKAKHAT, 11);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}').addTo(adminMap);
+}
+
+window.setMode = function(m){ mode=m; document.getElementById('m-from').className = m==='from'?'flex-1 py-1 rounded-lg bg-emerald-600 text-white':'flex-1 py-1 rounded-lg bg-slate-200'; document.getElementById('m-to').className = m==='to'?'flex-1 py-1 rounded-lg bg-emerald-600 text-white':'flex-1 py-1 rounded-lg bg-slate-200'; }
+window.useMyLocation = function(){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    fromCoords=[pos.coords.latitude, pos.coords.longitude];
+    if(markerFrom) map.removeLayer(markerFrom);
+    markerFrom=L.marker(fromCoords).addTo(map).bindPopup('My Location').openPopup();
+    map.setView(fromCoords, 14);
+    document.getElementById('fromI').value='My Location';
+    calcRoute();
+  }, ()=>{ alert('GPS not allowed, using Bokakhat default'); fromCoords=BOKAKHAT; document.getElementById('fromI').value='Bokakhat Town'; });
+}
+
+async function calcRoute(){
+  if(!fromCoords ||!toCoords) return;
+  try{
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromCoords[1]},${fromCoords[0]};${toCoords[1]},${toCoords[0]}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.routes && data.routes[0]){
+      distanceKm = data.routes[0].distance/1000;
+      const coords = data.routes[0].geometry.coordinates.map(c=>[c[1], c[0]]);
+      if(routeLine) map.removeLayer(routeLine);
+      routeLine = L.polyline(coords, {color:'#3b82f6', weight:4, opacity:0.8, dashArray:'8 12'}).addTo(map);
+      fare();
+    }
+  }catch(e){ console.warn('OSRM fail', e); distanceKm = 5; fare(); }
+}
+
+window.fare = function(){
+  const veh = CFG.vehicles.find(v=>v.id===selectedVeh);
+  const base = CFG.baseFare || 40;
+  const total = base + (distanceKm * (veh?.rate||10));
+  document.getElementById('fInfo').innerText = distanceKm.toFixed(1)+' KM • '+veh?.name;
+  document.getElementById('fPrice').innerText = '₹'+Math.round(total);
+  document.getElementById('baseFareShow').innerText = base;
+}
+
+window.buildVeh = function(){
+  const grid = document.getElementById('vehGrid');
+  grid.innerHTML='';
+  CFG.vehicles.forEach(v=>{
+    const active = selectedVeh===v.id;
+    const div = document.createElement('div');
+    div.className = active?'border-2 border-slate-900 bg-yellow-400 rounded-2xl p-2 text-center cursor-pointer':'border-2 bg-white rounded-2xl p-2 text-center cursor-pointer';
+    div.innerHTML=`<div class="text-xl">${v.icon}</div><div class="text-[11px] font-black">${v.name}</div><div class="text-[10px]">₹${v.rate}/km • ${v.capacity}</div>`;
+    div.onclick=()=>{ selectedVeh=v.id; buildVeh(); fare(); };
+    grid.appendChild(div);
+  });
+}
+
+window.switchTab = function(t){
+  document.getElementById('view-customer').classList.toggle('hidden', t!=='customer');
+  document.getElementById('view-driver').classList.toggle('hidden', t!=='driver');
+  document.getElementById('view-admin').classList.toggle('hidden', t!=='admin');
+  document.getElementById('tab-customer').className = t==='customer'?'flex-1 py-1.5 rounded-xl bg-yellow-400 text-slate-950 text-xs font-black':'flex-1 py-1.5 rounded-xl text-slate-400 text-xs font-black';
+  document.getElementById('tab-driver').className = t==='driver'?'flex-1 py-1.5 rounded-xl bg-yellow-400 text-slate-950 text-xs font-black':'flex-1 py-1.5 rounded-xl text-slate-400 text-xs font-black';
+  if(t==='driver'){ setTimeout(()=>{ dMap.invalidateSize(); },300); }
+  if(t==='admin'){ setTimeout(()=>{ adminMap.invalidateSize(); },300); }
+}
+
+let logoTaps=0, logoTimer=null;
+document.getElementById('logoTap').onclick=()=>{
+  logoTaps++;
+  if(logoTimer) clearTimeout(logoTimer);
+  logoTimer=setTimeout(()=>logoTaps=0,2000);
+  if(logoTaps>=5){ document.getElementById('tab-admin').classList.remove('hidden'); alert('🔓 Admin Unlocked! admin / admin123'); logoTaps=0; }
+}
+
+window.applyConfig=function(){
+  localStorage.setItem('et_cfg_v33_9', JSON.stringify(CFG));
+  buildVeh(); fare();
+  document.getElementById('apkBtn').innerText='⬇️ APK v'+CFG.apkVersion;
+  document.getElementById('dailyComm').value=CFG.dailyCommission;
+  document.getElementById('monthlyComm').value=CFG.monthlyCommission;
+  document.getElementById('setUpi').value=CFG.upi;
+  document.getElementById('setQrUrl').value=CFG.qrUrl;
+  document.getElementById('setQrNote').value=CFG.qrNote;
+  document.getElementById('driverQR').src=CFG.qrUrl;
+  document.getElementById('driverUPI').innerText=CFG.upi;
+  document.getElementById('qrNote').innerText=CFG.qrNote;
+  document.getElementById('adminQrPreview').src=CFG.qrUrl;
+  document.getElementById('setApkVersion').value=CFG.apkVersion;
+  document.getElementById('setApkLink').value=CFG.apkLink;
+  document.getElementById('setBaseFare').value=CFG.baseFare;
+  document.getElementById('setOfficeName').value=CFG.adminDetails.name;
+  document.getElementById('setPhone').value=CFG.adminDetails.phone;
+  document.getElementById('setAddress').value=CFG.adminDetails.address;
+  checkAutoUpdate(CFG);
+}
+
+// ===== Firebase Live Sync - AUTO UPDATE FROM ADMIN =====
+try{
+  const cfgRef = ref(db, 'config/et_cfg_v33_2');
+  onValue(cfgRef, (snap)=>{
+    if(snap.exists()){
+      const remote = snap.val();
+      if(remote.apkVersion) CFG.apkVersion = remote.apkVersion;
+      if(remote.apkLink) CFG.apkLink = remote.apkLink;
+      if(remote.upi) CFG.upi = remote.upi;
+      if(remote.qrUrl) CFG.qrUrl = remote.qrUrl;
+      if(remote.qrNote) CFG.qrNote = remote.qrNote;
+      if(remote.baseFare) CFG.baseFare = remote.baseFare;
+      if(remote.dailyCommission) CFG.dailyCommission = remote.dailyCommission;
+      if(remote.monthlyCommission) CFG.monthlyCommission = remote.monthlyCommission;
+      if(remote.vehicles) CFG.vehicles = remote.vehicles;
+      applyConfig();
+      console.log('🔥 Firebase Auto Update Received!', remote);
+    }
+  });
+}catch(e){ console.warn('Firebase sync fail', e); }window.createBooking=function(){
+  const phone=document.getElementById('cPhone').value.trim();
+  const name=document.getElementById('cName').value.trim();
+  const from=document.getElementById('fromI').value.trim();
+  const to=document.getElementById('toI').value.trim();
+  if(!phone||!name||!from||!to||!fromCoords||!toCoords){ alert('Sab fill karo + Map pe pickup/drop select karo!'); return; }
+  const otp = Math.floor(1000+Math.random()*9000).toString();
+  const veh=CFG.vehicles.find(v=>v.id===selectedVeh);
+  const price = Math.round((CFG.baseFare||40) + distanceKm*(veh?.rate||10));
+  const booking={id:Date.now().toString(), customerName:name, customerPhone:phone, from:from, to:to, fromCoords:fromCoords, toCoords:toCoords, vehicle:veh, distance:distanceKm.toFixed(1), price:price, otp:otp, status:'searching', createdAt:new Date().toLocaleString()};
+  const all=JSON.parse(localStorage.getItem('bookings')||'[]');
+  all.push(booking);
+  localStorage.setItem('bookings',JSON.stringify(all));
+  localStorage.setItem('active_booking',JSON.stringify(booking));
+  try{ set(ref(db,'bookings/'+booking.id), booking); }catch(e){}
+  showActiveBooking(booking);
+  alert('✅ Booking Created! OTP: '+otp+' | Driver dhundh rahe hain! Auto Update Active!');
+}
+
+function showActiveBooking(b){
+  const el=document.getElementById('activeCard');
+  el.classList.remove('hidden');
+  el.innerHTML=`<div class="flex justify-between items-center"><div class="font-black">🚖 Active Booking - ${b.vehicle.name} ${b.vehicle.icon}</div><span class="text-[10px] bg-yellow-400 text-slate-950 px-2 py-1 rounded-full">${b.status.toUpperCase()}</span></div><div class="text-xs space-y-1"><div>📍 ${b.from} → ${b.to}</div><div>📏 ${b.distance} KM | 💰 ₹${b.price} | Base ₹${CFG.baseFare}</div><div>👤 ${b.customerName} | 📞 ${b.customerPhone}</div><div class="bg-white text-slate-900 rounded-xl p-2 text-center font-black">OTP: ${b.otp} - Driver ko bolo</div></div><div class="flex gap-2"><button onclick="cancelBooking()" class="flex-1 py-2 bg-red-600 rounded-xl text-xs font-black">Cancel</button><button onclick="shareBooking()" class="flex-1 py-2 bg-yellow-400 text-slate-950 rounded-xl text-xs font-black">Share</button></div>`;
+  document.getElementById('bookingForm').classList.add('hidden');
+}
+
+window.cancelBooking=function(){ localStorage.removeItem('active_booking'); document.getElementById('activeCard').classList.add('hidden'); document.getElementById('bookingForm').classList.remove('hidden'); }
+window.shareBooking=function(){ const b=JSON.parse(localStorage.getItem('active_booking')||'null'); if(b) navigator.share?navigator.share({title:'Assam Easy Trip Booking', text:`Booking ${b.from} to ${b.to} Price ₹${b.price} OTP ${b.otp}`}):alert('Share: '+b.from+' to '+b.to+' ₹'+b.price); }
+
+window.driverLogin=function(){
+  const phone=document.getElementById('dPhone').value;
+  if(!phone){ alert('Phone daalo'); return; }
+  document.getElementById('driverLoginBox').classList.add('hidden');
+  document.getElementById('dPanel').classList.remove('hidden');
+  document.getElementById('dName').innerText='Driver '+phone.slice(-4);
+  loadDriverBookings();
+  setTimeout(()=>dMap.invalidateSize(),500);
+}
+
+function loadDriverBookings(){
+  const bookings=JSON.parse(localStorage.getItem('bookings')||'[]');
+  const list=document.getElementById('dList');
+  list.innerHTML='';
+  if(bookings.length===0){ list.innerHTML='<div class="text-xs text-center p-3 bg-white rounded-xl">No bookings yet - Customer booking ka wait karo</div>'; return; }
+  bookings.slice(-5).reverse().forEach(b=>{
+    const div=document.createElement('div');
+    div.className='bg-white border-2 rounded-2xl p-3 text-xs';
+    div.innerHTML=`<div class="font-black">${b.from} → ${b.to}</div><div>₹${b.price} • ${b.distance} KM • ${b.vehicle.name} ${b.vehicle.icon}</div><div>Customer: ${b.customerName} • OTP: ${b.otp}</div><div class="flex gap-2 mt-2"><button onclick="acceptBooking('${b.id}')" class="flex-1 py-1.5 bg-emerald-600 text-white rounded-lg font-black">Accept</button><button onclick="viewBookingMap('${b.id}')" class="flex-1 py-1.5 bg-slate-900 text-yellow-400 rounded-lg font-black">Map</button></div>`;
+    list.appendChild(div);
+  });
+}
+
+window.acceptBooking=function(id){ const bookings=JSON.parse(localStorage.getItem('bookings')||'[]'); const b=bookings.find(x=>x.id===id); if(b){ b.status='accepted'; localStorage.setItem('bookings',JSON.stringify(bookings)); alert('✅ Booking Accepted! OTP lo customer se: '+b.otp); try{ update(ref(db,'bookings/'+id),{status:'accepted'});}catch(e){} } }
+
+window.adminLogin=function(){
+  const u=document.getElementById('aUser').value, p=document.getElementById('aPass').value;
+  if(u==='admin'&&p==='admin123'){ document.getElementById('adminLoginBox').classList.add('hidden'); document.getElementById('aPanel').classList.remove('hidden'); loadAdminData(); setTimeout(()=>adminMap.invalidateSize(),500); }
+  else alert('Wrong! admin / admin123');
+}
+
+function loadAdminData(){
+  const bookings=JSON.parse(localStorage.getItem('bookings')||'[]');
+  document.getElementById('statBookings').innerText=bookings.length;
+  document.getElementById('statDrivers').innerText='12';
+  document.getElementById('statPending').innerText=bookings.filter(b=>b.status==='searching').length;
+  const blist=document.getElementById('bookingAdminList');
+  blist.innerHTML='';
+  bookings.slice(-20).reverse().forEach(b=>{
+    const div=document.createElement('div');
+    div.className='bg-white border rounded-xl p-2 text-xs flex justify-between items-center';
+    div.innerHTML=`<div><div class="font-black">${b.from} → ${b.to}</div><div>₹<input type="number" value="${b.price}" onchange="editBookingPrice('${b.id}',this.value)" class="w-16 border rounded px-1"/> • ${b.customerName} • ${b.otp}</div></div><span class="text-[10px] bg-slate-900 text-white px-2 py-1 rounded">${b.status}</span>`;
+    blist.appendChild(div);
+  });
+  const dlist=document.getElementById('driverAdminList');
+  dlist.innerHTML='<div class="bg-white border rounded-xl p-2 text-xs"><div class="font-black">Raju Sharma - 9876543210 - AS 05 AB 4589</div><div class="flex gap-2 mt-1"><button onclick="approveDriver(this)" class="px-2 py-1 bg-emerald-600 text-white rounded">Approve</button><button class="px-2 py-1 bg-red-600 text-white rounded">Reject</button></div></div>';
+  const vlist=document.getElementById('vehAdminList');
+  vlist.innerHTML='';
+  CFG.vehicles.forEach(v=>{
+    const div=document.createElement('div');
+    div.className='bg-white border-2 rounded-xl p-2 text-xs flex justify-between items-center';
+    div.innerHTML=`<div>${v.icon} ${v.name} - ₹${v.rate}/km - ${v.capacity} seat</div><div class="flex gap-1"><button onclick="editVehicle('${v.id}')" class="px-2 py-1 bg-blue-600 text-white rounded">Edit</button><button onclick="deleteVehicle('${v.id}')" class="px-2 py-1 bg-red-600 text-white rounded">Del</button></div>`;
+    vlist.appendChild(div);
+  });
+}
+
+window.editBookingPrice=function(id,val){ const bookings=JSON.parse(localStorage.getItem('bookings')||'[]'); const b=bookings.find(x=>x.id===id); if(b){ b.price=parseInt(val); localStorage.setItem('bookings',JSON.stringify(bookings)); try{ update(ref(db,'bookings/'+id),{price:b.price}); }catch(e){} } }
+window.switchAdminTab=function(t){ ['overview','vehicles','payment','bookings','drivers','settings','maps'].forEach(k=>{ const el=document.getElementById('admin-'+k); if(el) el.classList.toggle('hidden',k!==t); const btn=document.getElementById('atab-'+k); if(btn) btn.className = k===t?'py-1.5 px-3 rounded-lg bg-slate-900 text-yellow-400':'py-1.5 px-3 rounded-lg bg-slate-100'; }); if(t==='maps') setTimeout(()=>adminMap.invalidateSize(),300); }
+window.saveCommission=function(){ CFG.dailyCommission=parseInt(document.getElementById('dailyComm').value)||200; CFG.monthlyCommission=parseInt(document.getElementById('monthlyComm').value)||4000; applyConfig(); try{ set(ref(db,'config/et_cfg_v33_2'), CFG); }catch(e){} alert('✅ Commission Saved - Auto Update Triggered!'); }
+window.savePaymentSettings=function(){ CFG.upi=document.getElementById('setUpi').value; CFG.qrUrl=document.getElementById('setQrUrl').value; CFG.qrNote=document.getElementById('setQrNote').value; applyConfig(); try{ set(ref(db,'config/et_cfg_v33_2'), CFG); }catch(e){} alert('✅ QR + UPI Saved - Driver App Live Update!'); }
+window.saveSettings=function(){
+  CFG.baseFare=parseInt(document.getElementById('setBaseFare').value)||40;
+  CFG.apkVersion=parseFloat(document.getElementById('setApkVersion').value)||33.9;
+  CFG.apkLink=document.getElementById('setApkLink').value;
+  CFG.adminDetails.name=document.getElementById('setOfficeName').value;
+  CFG.adminDetails.phone=document.getElementById('setPhone').value;
+  CFG.adminDetails.address=document.getElementById('setAddress').value;
+  applyConfig();
+  try{ set(ref(db,'config/et_cfg_v33_2'), CFG); }catch(e){}
+  localStorage.setItem('apk_ver', String(CFG.apkVersion));
+  alert('✅ All Settings Saved! APK v'+CFG.apkVersion+' - Sab APK me 1 min me Auto Update popup ayega!');
+}
+window.downloadExcel=function(type){
+  const bookings=JSON.parse(localStorage.getItem('bookings')||'[]');
+  let csv='From,To,Distance,Price,Customer,Phone,OTP,Status,Date\n';
+  bookings.forEach(b=>{ csv+=`"${b.from}","${b.to}",${b.distance},${b.price},"${b.customerName}",${b.customerPhone},${b.otp},${b.status},"${b.createdAt}"\n`; });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='assam-easy-trip-bookings-v'+CFG.apkVersion+'.csv'; a.click();
+}
+window.openVehModal=function(id=null){ document.getElementById('vehModal').classList.remove('hidden'); if(id){ const v=CFG.vehicles.find(x=>x.id===id); document.getElementById('vehId').value=v.id; document.getElementById('vehName').value=v.name; document.getElementById('vehIcon').value=v.icon; document.getElementById('vehRate').value=v.rate; document.getElementById('vehCap').value=v.capacity; } }
+window.closeVehModal=function(){ document.getElementById('vehModal').classList.add('hidden'); document.getElementById('vehId').value=''; document.getElementById('vehName').value=''; }
+window.saveVehicle=function(){ const id=document.getElementById('vehId').value||document.getElementById('vehName').value.toLowerCase(); const name=document.getElementById('vehName').value; const icon=document.getElementById('vehIcon').value; const rate=parseInt(document.getElementById('vehRate').value); const cap=parseInt(document.getElementById('vehCap').value); const existing=CFG.vehicles.findIndex(v=>v.id===id); if(existing>=0){ CFG.vehicles[existing]={id,name,icon,rate,capacity:cap}; }else{ CFG.vehicles.push({id,name,icon,rate,capacity:cap}); } applyConfig(); try{ set(ref(db,'config/et_cfg_v33_2'),CFG);}catch(e){} closeVehModal(); loadAdminData(); }
+window.editVehicle=function(id){ openVehModal(id); }
+window.deleteVehicle=function(id){ if(confirm('Delete '+id+'?')){ CFG.vehicles=CFG.vehicles.filter(v=>v.id!==id); applyConfig(); try{ set(ref(db,'config/et_cfg_v33_2'),CFG);}catch(e){} loadAdminData(); } }
+window.toggleDuty=function(){ const btn=document.getElementById('dutyBtn'); const dot=document.getElementById('dutyDot'); const txt=document.getElementById('dutyText'); const isOn=btn.classList.contains('bg-emerald-500'); if(isOn){ btn.className='w-14 h-7 rounded-full bg-slate-300 relative mt-1'; dot.style.left='2px'; txt.innerText='OFF'; }else{ btn.className='w-14 h-7 rounded-full bg-emerald-500 relative mt-1'; dot.style.left='28px'; txt.innerText='ON'; } }
+window.viewBookingMap=function(id){ alert('Map view for '+id+' - Bokakhat default'); }
+window.approveDriver=function(btn){ btn.innerText='Approved'; btn.className='px-2 py-1 bg-emerald-600 text-white rounded'; }
+
+window.onload=()=>{
+  initMaps();
+  applyConfig();
+  buildVeh();
+  const active=JSON.parse(localStorage.getItem('active_booking')||'null');
+  if(active) showActiveBooking(active);
+  // Quick places
+  const places=['Bokakhat Town','Golaghat','Numaligarh','Dergaon','Jorhat','Kaziranga','Sivasagar'];
+  const quick=document.getElementById('quick');
+  places.forEach(p=>{ const b=document.createElement('button'); b.className='px-2 py-1 bg-white border rounded-full text-[10px]'; b.innerText=p; b.onclick=()=>{ if(mode==='from') document.getElementById('fromI').value=p; else document.getElementById('toI').value=p; }; quick.appendChild(b); });
+  console.log('🚀 v33.9 AUTO UPDATE ULTIMATE LOADED - Bokakhat 26.6247,93.6035 - No Kharghuli');
+}
+</script>
+</body>
+</html>
